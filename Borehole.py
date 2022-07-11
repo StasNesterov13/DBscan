@@ -77,10 +77,10 @@ class Borehole:
 
     @staticmethod
     def Epsilon():
-        nbrs = NearestNeighbors(n_neighbors=6).fit(x_principal)
+        nbrs = NearestNeighbors(n_neighbors=2).fit(x_principal)
         distances, indices = nbrs.kneighbors(x_principal)
         distances = np.sort(distances, axis=0)
-        distances = distances[:, 5]
+        distances = distances[:, 1]
         plt.figure(figsize=(10, 5))
         plt.plot(distances)
         plt.title('K-distance Graph', fontsize=10)
@@ -201,5 +201,6 @@ class Borehole:
         self.Graphics_pressure()
 
     def Remove(self):
+        print(self.df.loc[self.df['Cluster'] == -1])
         self.df = self.df.loc[self.df['Cluster'] != -1]
         self.Standard()
