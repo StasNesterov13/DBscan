@@ -55,6 +55,10 @@ def remove():
     borehole.Remove()
 
 
+def writer():
+    borehole.Writer()
+
+
 if __name__ == '__main__':
     window = Tk()
     window.title("Debit")
@@ -68,12 +72,12 @@ if __name__ == '__main__':
     txt3.grid(column=1, row=2)
     btn1 = Button(window, text="Загрузить данные скважины", command=clicked, height=3, width=30)
     btn1.grid(column=1, row=3)
-    btn2 = Button(window, text="График расстояний", command=epsilon, height=3, width=30)
-    btn2.grid(column=1, row=6)
-    btn3 = Button(window, text="Удалить лишние точки", command=remove, height=3, width=30)
-    btn3.grid(column=1, row=5)
     btn11 = Button(window, text="Прочитать данные скважины", command=read, height=3, width=30)
     btn11.grid(column=1, row=4)
+    btn3 = Button(window, text="Удалить лишние точки", command=remove, height=3, width=30)
+    btn3.grid(column=1, row=5)
+    btn12 = Button(window, text="Сохранить данные скважины", command=writer, height=3, width=30)
+    btn12.grid(column=1, row=6)
 
     txt4 = Entry(window, width=20)
     txt4.grid(column=2, row=0)
@@ -94,5 +98,7 @@ if __name__ == '__main__':
     btn9.grid(column=0, row=6)
     btn10 = Button(window, text="График давления", command=graphics_pressure, height=3, width=30)
     btn10.grid(column=0, row=7)
+    btn2 = Button(window, text="График расстояний", command=epsilon, height=3, width=30)
+    btn2.grid(column=0, row=8)
 
     window.mainloop()

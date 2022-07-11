@@ -183,6 +183,10 @@ class Borehole:
         plt.show()
 
     def Remove(self):
-        print(self.df.loc[self.df['Cluster'] == -1])
         self.df = self.df.loc[self.df['Cluster'] != -1]
         self.Standard()
+
+    def Writer(self):
+        writer = pd.ExcelWriter('Two.xlsx')
+        self.df.to_excel(writer)
+        writer.save()
