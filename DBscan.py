@@ -6,7 +6,6 @@ def clicked():
     global borehole
     borehole = Borehole(txt1.get(), txt2.get(), int(txt3.get()))
     borehole.Creature()
-    borehole.Read()
     lbl = Label(window, text=borehole.name, width=15, height=1)
     lbl.grid(column=0, row=1)
 

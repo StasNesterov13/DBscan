@@ -35,13 +35,17 @@ class Borehole:
             for row in ws[f'{self.col_start}{i}':f'{self.col_end}{i}']:
                 for cell in row:
                     data_row.append(cell.value)
-                    print(cell.value)
             data.append(data_row)
+
         self.name = ws[f'A{self.number_data}'].value
         self.df = pd.DataFrame(data, index=[self.param[2], self.param[3], self.param[4], self.param[6], self.param[10],
                                             self.param[12]], columns=time)
         self.df = self.df.transpose()
-        self.df.dropna(axis=0, how='any', inplace=True)
+        self.df.dropna(axis=0, how='all', inplace=True)
+        self.df.fillna(value=0, inplace=True)
+        for cell in set(self.df.index.tolist()):
+            if isinstance(cell, str):
+                self.df.drop(index=cell, inplace=True)
         wb.close()
 
         writer = pd.ExcelWriter('One.xlsx')
@@ -59,6 +63,7 @@ class Borehole:
         self.df = pd.read_excel('One.xlsx', sheet_name=f'{wb.sheetnames[0]}', index_col=0)
         self.Standard()
         self.df['Cluster'] = 0
+        print(self.df)
 
     def Standard(self):
         sc = StandardScaler()
@@ -117,7 +122,7 @@ class Borehole:
 
         plt.figure(figsize=(10, 5))
         plt.scatter(self.df.index.tolist(), self.df[self.param[6]], s=15, c=color)
-        plt.title("Qн, т/сут", fontname="Times New Roman", fontweight="bold")
+        plt.title('Qн, т/сут', fontname='Times New Roman', fontweight='bold')
         plt.grid(True)
         plt.show()
 
@@ -131,7 +136,7 @@ class Borehole:
 
         plt.figure(figsize=(10, 5))
         plt.scatter(self.df.index.tolist(), self.df[self.param[3]], s=15, c=color)
-        plt.title("Qгаз, м3/сут", fontname="Times New Roman", fontweight="bold")
+        plt.title('Qгаз, м3/сут', fontname='Times New Roman', fontweight='bold')
         plt.grid(True)
         plt.show()
 
@@ -145,7 +150,7 @@ class Borehole:
 
         plt.figure(figsize=(10, 5))
         plt.scatter(self.df.index.tolist(), self.df[self.param[4]], s=15, c=color)
-        plt.title("Обв, %", fontname="Times New Roman", fontweight="bold")
+        plt.title('Обв, %', fontname='Times New Roman', fontweight='bold')
         plt.grid(True)
         plt.show()
 
@@ -159,7 +164,7 @@ class Borehole:
 
         plt.figure(figsize=(10, 5))
         plt.scatter(self.df.index.tolist(), self.df[self.param[10]], s=15, c=color)
-        plt.title("ГФ, м3/т", fontname="Times New Roman", fontweight="bold")
+        plt.title('ГФ, м3/т', fontname='Times New Roman', fontweight='bold')
         plt.grid(True)
         plt.show()
 
@@ -173,7 +178,7 @@ class Borehole:
 
         plt.figure(figsize=(10, 5))
         plt.scatter(self.df.index.tolist(), self.df[self.param[12]], s=15, c=color)
-        plt.title("'Рзаб ГНК'", fontname="Times New Roman", fontweight="bold")
+        plt.title('Рзаб ГНК', fontname="Times New Roman", fontweight="bold")
         plt.grid(True)
         plt.show()
 
