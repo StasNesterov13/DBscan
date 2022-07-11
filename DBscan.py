@@ -4,11 +4,19 @@ from Borehole import *
 
 def clicked():
     global borehole
-    borehole = Borehole(txt1.get(), txt2.get(), txt3.get())
+    borehole = Borehole(txt1.get(), txt2.get(), int(txt3.get()))
     borehole.Creature()
     borehole.Read()
-    lbl = Label(window, text=borehole.number_data, width=3, height=1)
-    lbl.grid(column=1, row=7)
+    lbl = Label(window, text=borehole.name, width=15, height=1)
+    lbl.grid(column=0, row=1)
+
+
+def read():
+    global borehole
+    borehole = Borehole()
+    borehole.Read()
+    lbl = Label(window, text=borehole.name, width=15, height=1)
+    lbl.grid(column=0, row=1)
 
 
 def epsilon():
@@ -48,39 +56,31 @@ def remove():
     borehole.Remove()
 
 
-def read():
-    global borehole
-    borehole = Borehole()
-    borehole.Read()
-    lbl = Label(window, text=borehole.number_data, width=3, height=1)
-    lbl.grid(column=1, row=7)
-
-
 if __name__ == '__main__':
     window = Tk()
     window.title("Debit")
     window.geometry('650x450')
 
-    txt1 = Entry(window,  width=20)
+    txt1 = Entry(window, width=20)
     txt1.grid(column=1, row=0)
-    txt2 = Entry(window,  width=20)
+    txt2 = Entry(window, width=20)
     txt2.grid(column=1, row=1)
     txt3 = Entry(window, width=20)
     txt3.grid(column=1, row=2)
     btn1 = Button(window, text="Загрузить данные скважины", command=clicked, height=3, width=30)
     btn1.grid(column=1, row=3)
     btn2 = Button(window, text="График расстояний", command=epsilon, height=3, width=30)
-    btn2.grid(column=1, row=4)
+    btn2.grid(column=1, row=6)
     btn3 = Button(window, text="Удалить лишние точки", command=remove, height=3, width=30)
     btn3.grid(column=1, row=5)
     btn11 = Button(window, text="Прочитать данные скважины", command=read, height=3, width=30)
-    btn11.grid(column=1, row=6)
+    btn11.grid(column=1, row=4)
 
     txt4 = Entry(window, width=20)
     txt4.grid(column=2, row=0)
     txt5 = Entry(window, width=20)
     txt5.grid(column=2, row=1)
-    btn4 = Button(window, text="Сканирование", command=scan, height=3, width=30)
+    btn4 = Button(window, text="DBscan", command=scan, height=3, width=30)
     btn4.grid(column=2, row=3)
     btn5 = Button(window, text="Кластеризация", command=clustering, height=3, width=30)
     btn5.grid(column=2, row=4)
