@@ -1,43 +1,43 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import matplotlib.colors as palette
 from openpyxl import load_workbook
 from sklearn.cluster import DBSCAN
 from sklearn.decomposition import PCA
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler
-from sklearn.preprocessing import normalize
 
 
 class Borehole:
 
-    def __init__(self, start='E', end='BNQ', num_data=3):
-        self.col_start = start
-        self.col_end = end
-        self.number_data = num_data
+    def __init__(self):
         self.df = pd.DataFrame()
+        self.name = None
+        self.x_principal = None
+        self.x_scaled = None
         self.param = ['Состояние', 'Dшт, мм', 'Qж, м3/сут', 'Qгаз, м3/сут', 'Обв, %', 'Обв ХАЛ, %', 'Qн, т/сут',
                       'Рбуф, атм', 'Рзатр, атм', 'Рлин, атм', 'ГФ, м3/т', 'Рпл ГНК', 'Рзаб ГНК', 'F, Гц', 'Рприем, атм',
                       'Прим', 'Рзаб замер', 'Траб']
-        self.name = None
 
-    def Creature(self):
+    def Creature(self, start, end, num_data):
         wb = load_workbook(filename='Debit.xlsx', read_only=True, data_only=True)
         ws = wb[f'{wb.sheetnames[0]}']
         time = []
         data = []
-        for row in ws[f'{self.col_start}2':f'{self.col_end}2']:
+        for row in ws[f'{start}2':f'{end}2']:
             for cell in row:
                 time.append(cell.value)
-        for i in [self.number_data + 2, self.number_data + 3, self.number_data + 4, self.number_data + 6,
-                  self.number_data + 10, self.number_data + 12]:
+        for i in [num_data + 2, num_data + 3, num_data + 4, num_data + 6,
+                  num_data + 10, num_data + 12]:
             data_row = []
-            for row in ws[f'{self.col_start}{i}':f'{self.col_end}{i}']:
+            for row in ws[f'{start}{i}':f'{end}{i}']:
                 for cell in row:
                     data_row.append(cell.value)
+                    print(cell.value)
             data.append(data_row)
 
-        self.name = ws[f'A{self.number_data}'].value
+        self.name = ws[f'A{num_data}'].value
         self.df = pd.DataFrame(data, index=[self.param[2], self.param[3], self.param[4], self.param[6], self.param[10],
                                             self.param[12]], columns=time)
         self.df = self.df.transpose()
@@ -57,33 +57,29 @@ class Borehole:
         wb.save(filename='One.xlsx')
         wb.close()
 
+        self.Standard()
+
     def Read(self):
         wb = load_workbook(filename='One.xlsx', read_only=True)
         self.name = wb[f'{wb.sheetnames[0]}']['A1'].value
         self.df = pd.read_excel('One.xlsx', sheet_name=f'{wb.sheetnames[0]}', index_col=0)
         self.Standard()
-        self.df['Cluster'] = 0
-        print(self.df)
+        wb.close()
 
     def Standard(self):
-        sc = StandardScaler()
-        x_scaled = sc.fit_transform(self.df)
 
-        x_normal = normalize(x_scaled)
-        x_normal = pd.DataFrame(x_normal)
+        self.df['Cluster'] = 0
 
-        pca = PCA(n_components=2)
-        global x_principal
-        x_principal = pca.fit_transform(x_normal)
-        x_principal = pd.DataFrame(x_principal)
-        x_principal.columns = ['V1', 'V2']
+        self.x_scaled = StandardScaler().fit_transform(self.df)
 
-    @staticmethod
-    def Epsilon():
-        nbrs = NearestNeighbors(n_neighbors=2).fit(x_principal)
-        distances, indices = nbrs.kneighbors(x_principal)
-        distances = np.sort(distances, axis=0)
-        distances = distances[:, 1]
+        self.x_principal = PCA(n_components=2).fit_transform(self.x_scaled)
+        self.x_principal = pd.DataFrame(self.x_principal)
+        self.x_principal.columns = ['V1', 'V2']
+
+    def Epsilon(self, k):
+        nbrs = NearestNeighbors(n_neighbors=k).fit(self.x_principal)
+        distances, indices = nbrs.kneighbors(self.x_principal)
+        distances = np.sort(distances[:, 1:].mean(axis=1))
         plt.figure(figsize=(10, 5))
         plt.plot(distances)
         plt.title('K-distance Graph', fontsize=10)
@@ -93,35 +89,28 @@ class Borehole:
         plt.show()
 
     def Scan(self, eps, elements):
-        dbscan = DBSCAN(eps=eps, min_samples=elements).fit(x_principal)
+        dbscan = DBSCAN(eps=eps, min_samples=elements).fit(self.x_principal)
         labels = dbscan.labels_
         self.df['Cluster'] = labels
 
-    def Clustering(self):
-        import matplotlib.colors as palette
-
-        stake = list(palette.CSS4_COLORS.values())[10:] + ['red']
+    def Color(self):
+        stake = ['black'] + list(palette.CSS4_COLORS.values())[10:] + ['red']
         clusterColor = {}
 
         for i in range(-1, len(set(self.df['Cluster']))):
             clusterColor[i] = stake[i]
 
-        color = [clusterColor[label] for label in self.df['Cluster']]
+        return [clusterColor[label] for label in self.df['Cluster']]
+
+    def Clustering(self):
         plt.figure(figsize=(10, 8))
-        plt.scatter(x_principal['V1'], x_principal['V2'], s=15, c=color)
+        plt.scatter(self.x_principal['V1'], self.x_principal['V2'], s=15, c=self.Color())
         plt.title('Implementation of DBSCAN Clustering', fontname='Times New Roman', fontweight='bold')
         plt.show()
 
     def Graphics_oil(self):
-        color = []
-        for label in self.df['Cluster']:
-            if label == -1:
-                color.append('red')
-            else:
-                color.append('black')
-
         plt.figure(figsize=(10, 5))
-        plt.scatter(self.df.index.tolist(), self.df[self.param[6]], s=15, c=color)
+        plt.scatter(self.df.index.tolist(), self.df[self.param[6]], s=15, c=self.Color())
         plt.title('Qн, т/сут', fontname='Times New Roman', fontweight='bold')
         plt.grid(True)
         plt.show()
