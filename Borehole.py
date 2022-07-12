@@ -1,12 +1,13 @@
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 import matplotlib.colors as palette
 from openpyxl import load_workbook
 from sklearn.cluster import DBSCAN
 from sklearn.decomposition import PCA
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans
 
 
 class Borehole:
@@ -74,7 +75,7 @@ class Borehole:
 
         self.x_principal = PCA(n_components=2).fit_transform(self.x_scaled)
         self.x_principal = pd.DataFrame(self.x_principal)
-        self.x_principal.columns = ['V1', 'V2']
+        print(self.x_principal)
 
     def Epsilon(self, k):
         nbrs = NearestNeighbors(n_neighbors=k).fit(self.x_principal)
@@ -82,91 +83,69 @@ class Borehole:
         distances = np.sort(distances[:, 1:].mean(axis=1))
         plt.figure(figsize=(10, 5))
         plt.plot(distances)
-        plt.title('K-distance Graph', fontsize=10)
+        plt.title(f'{k}-distance Graph', fontsize=10)
         plt.xlabel('Data Points sorted by distance', fontsize=7)
         plt.ylabel('Epsilon', fontsize=7)
         plt.grid(True)
         plt.show()
 
-    def Scan(self, eps, elements):
+    def DBscan(self, eps, elements):
         dbscan = DBSCAN(eps=eps, min_samples=elements).fit(self.x_principal)
-        labels = dbscan.labels_
-        self.df['Cluster'] = labels
+        self.df['Cluster'] = dbscan.labels_
 
-    def Color(self):
-        stake = ['black'] + list(palette.CSS4_COLORS.values())[10:] + ['red']
-        clusterColor = {}
+    def Means(self):
+        model = KMeans(n_clusters=10)
+        model.fit(self.x_principal)
 
-        for i in range(-1, len(set(self.df['Cluster']))):
-            clusterColor[i] = stake[i]
+        self.df['Cluster'] = model.predict(self.x_principal)
+
+    def Color(self, rainbow):
+        if rainbow:
+            stake_color = list(palette.CSS4_COLORS.values())[10:] + ['red']
+        else:
+            stake_color = (len(set(self.df['Cluster'])) - 1) * ['black'] + ['red']
+        stake_cluster = set(self.df['Cluster'])
+        clusterColor = dict(zip(stake_cluster, stake_color))
 
         return [clusterColor[label] for label in self.df['Cluster']]
 
     def Clustering(self):
         plt.figure(figsize=(10, 8))
-        plt.scatter(self.x_principal['V1'], self.x_principal['V2'], s=15, c=self.Color())
-        plt.title('Implementation of DBSCAN Clustering', fontname='Times New Roman', fontweight='bold')
+        plt.scatter(self.x_principal.iloc[:, 0], self.x_principal.iloc[:, 1], s=15, c=self.Color(0))
+        plt.title('DBSCAN emissions', fontname='Times New Roman', fontweight='bold')
         plt.show()
 
     def Graphics_oil(self):
         plt.figure(figsize=(10, 5))
-        plt.scatter(self.df.index.tolist(), self.df[self.param[6]], s=15, c=self.Color())
+        plt.scatter(self.df.index.tolist(), self.df[self.param[6]], s=15, c=self.Color(1))
         plt.title('Qн, т/сут', fontname='Times New Roman', fontweight='bold')
         plt.grid(True)
         plt.show()
 
     def Graphics_gas(self):
-        color = []
-        for label in self.df['Cluster']:
-            if label == -1:
-                color.append('red')
-            else:
-                color.append('black')
-
         plt.figure(figsize=(10, 5))
-        plt.scatter(self.df.index.tolist(), self.df[self.param[3]], s=15, c=color)
+        plt.scatter(self.df.index.tolist(), self.df[self.param[3]], s=15, c=self.Color(0))
         plt.title('Qгаз, м3/сут', fontname='Times New Roman', fontweight='bold')
         plt.grid(True)
         plt.show()
 
     def Graphics_water(self):
-        color = []
-        for label in self.df['Cluster']:
-            if label == -1:
-                color.append('red')
-            else:
-                color.append('black')
-
         plt.figure(figsize=(10, 5))
-        plt.scatter(self.df.index.tolist(), self.df[self.param[4]], s=15, c=color)
+        plt.scatter(self.df.index.tolist(), self.df[self.param[4]], s=15, c=self.Color(0))
         plt.title('Обв, %', fontname='Times New Roman', fontweight='bold')
         plt.grid(True)
         plt.show()
 
     def Graphics_gf(self):
-        color = []
-        for label in self.df['Cluster']:
-            if label == -1:
-                color.append('red')
-            else:
-                color.append('black')
-
         plt.figure(figsize=(10, 5))
-        plt.scatter(self.df.index.tolist(), self.df[self.param[10]], s=15, c=color)
+        plt.scatter(self.df.index.tolist(), self.df[self.param[10]], s=15, c=self.Color(0))
         plt.title('ГФ, м3/т', fontname='Times New Roman', fontweight='bold')
         plt.grid(True)
         plt.show()
 
     def Graphics_pressure(self):
-        color = []
-        for label in self.df['Cluster']:
-            if label == -1:
-                color.append('red')
-            else:
-                color.append('black')
-
         plt.figure(figsize=(10, 5))
-        plt.scatter(self.df.index.tolist(), self.df[self.param[12]], s=15, c=color)
+        plt.scatter(self.df.index.tolist(), self.df[self.param[12]], s=15, c=self.Color(0))
         plt.title('Рзаб ГНК', fontname="Times New Roman", fontweight="bold")
         plt.grid(True)
         plt.show()

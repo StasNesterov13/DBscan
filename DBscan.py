@@ -23,8 +23,12 @@ def epsilon():
     plt.show()
 
 
-def scan():
-    borehole.Scan(float(txt4.get()), int(txt5.get()))
+def dbscan():
+    borehole.DBscan(float(txt4.get()), int(txt5.get()))
+
+
+def means():
+    borehole.Means()
 
 
 def clustering():
@@ -93,12 +97,14 @@ if __name__ == '__main__':
     lbl6.grid(column=2, row=2)
     txt5 = Entry(window, width=20)
     txt5.grid(column=2, row=3)
-    btn5 = Button(window, text="График расстояний", command=epsilon, height=2, width=30)
+    btn5 = Button(window, text="K-distance Graph", command=epsilon, height=2, width=30)
     btn5.grid(column=2, row=6)
-    btn6 = Button(window, text="DBscan", command=scan, height=2, width=30)
+    btn6 = Button(window, text="DBscan", command=dbscan, height=2, width=30)
     btn6.grid(column=2, row=7)
     btn7 = Button(window, text="Кластеризация", command=clustering, height=2, width=30)
     btn7.grid(column=2, row=8)
+    btn13 = Button(window, text="K-means", command=means, height=2, width=30)
+    btn13.grid(column=2, row=9)
 
     btn8 = Button(window, text="График дебита нефти", command=graphics_oil, height=2, width=30)
     btn8.grid(column=0, row=6)
