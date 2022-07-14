@@ -7,8 +7,6 @@ from sklearn.cluster import DBSCAN
 from sklearn.decomposition import PCA
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler
-from sklearn.cluster import KMeans
-
 
 class Borehole:
 
@@ -17,32 +15,33 @@ class Borehole:
         self.name = None
         self.x_principal = None
         self.x_scaled = None
+        self.pressure = None
         self.param = ['Состояние', 'Dшт, мм', 'Qж, м3/сут', 'Qгаз, м3/сут', 'Обв, %', 'Обв ХАЛ, %', 'Qн, т/сут',
                       'Рбуф, атм', 'Рзатр, атм', 'Рлин, атм', 'ГФ, м3/т', 'Рпл ГНК', 'Рзаб ГНК', 'F, Гц', 'Рприем, атм',
                       'Прим', 'Рзаб замер', 'Траб']
-        self.pressure = None
 
     def Creature(self, start, end, num_data, press):
         wb = load_workbook(filename='Debit.xlsx', read_only=True, data_only=True)
         ws = wb[f'{wb.sheetnames[0]}']
-        time = []
+        date = []
         data = []
         self.pressure = press
         for row in ws[f'{start}2':f'{end}2']:
             for cell in row:
-                time.append(cell.value)
+                date.append(cell.value)
+        progress = 0
         for i in [num_data + 2, num_data + 3, num_data + 4, num_data + 6,
                   num_data + 10, num_data + self.pressure]:
+            progress += 100/6
             data_row = []
             for row in ws[f'{start}{i}':f'{end}{i}']:
                 for cell in row:
                     data_row.append(cell.value)
-                    print(cell.value)
             data.append(data_row)
-
+            yield progress
         self.name = ws[f'A{num_data}'].value
         self.df = pd.DataFrame(data, index=[self.param[2], self.param[3], self.param[4], self.param[6], self.param[10],
-                                            self.param[self.pressure]], columns=time)
+                                            self.param[self.pressure]], columns=date)
         self.df = self.df.transpose()
         self.df.dropna(axis=0, how='all', inplace=True)
         self.df.fillna(value=0, inplace=True)
@@ -60,7 +59,7 @@ class Borehole:
         wb.save(filename='One.xlsx')
         wb.close()
 
-        self.Standard()
+        self.Read()
 
     def Read(self):
         wb = load_workbook(filename='One.xlsx', read_only=True)
@@ -71,7 +70,6 @@ class Borehole:
         self.df = pd.read_excel('One.xlsx', sheet_name=f'{wb.sheetnames[0]}', index_col=0)
 
         self.Standard()
-        print(self.df.iloc[:, :-1])
 
     def Standard(self):
 
