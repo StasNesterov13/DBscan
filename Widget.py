@@ -45,7 +45,7 @@ class Download(Toplevel):
                            bg='lightblue')
         self.btn3.grid(column=0, row=3, padx=10, pady=10)
 
-        self.btn4 = Button(self, text="Открыть данные скважины", command=lambda: self.open(parent), width=22,
+        self.btn4 = Button(self, text="Открыть данные скважины", command=lambda: self.open(parent, self.txt3.get()), width=22,
                            font="Arial 10",
                            bg='lightblue')
         self.btn4.grid(column=2, row=3, padx=10, pady=10)
@@ -55,8 +55,8 @@ class Download(Toplevel):
         parent.lbl1.config(text=f'{parent.borehole.name}')
         self.destroy()
 
-    def open(self, parent):
-        parent.borehole.Read()
+    def open(self, parent, sheet):
+        parent.borehole.Read(sheet)
         parent.lbl1.config(text=f'{parent.borehole.name}')
         self.destroy()
 
@@ -118,36 +118,38 @@ class Widget(Tk):
         self.frame3.config(bg='white')
         self.frame3.pack(side='bottom', fill='both')
 
-        check_btn1 = Checkbutton(self.frame2, text="График дебита нефти", variable=self.graph_oil, padx=5, pady=5,
-                                 bg='lightblue')
-        check_btn1.grid(column=0, row=0, sticky='w')
+        self.check_btn1 = Checkbutton(self.frame2, text="График дебита нефти", variable=self.graph_oil, padx=5, pady=5,
+                                      bg='lightblue')
+        self.check_btn1.grid(column=0, row=0, sticky='w')
 
-        check_btn2 = Checkbutton(self.frame2, text="График дебита газа", variable=self.graph_gas, padx=5, pady=5,
-                                 bg='lightblue')
-        check_btn2.grid(column=0, row=1, sticky='w')
+        self.check_btn2 = Checkbutton(self.frame2, text="График дебита газа", variable=self.graph_gas, padx=5, pady=5,
+                                      bg='lightblue')
+        self.check_btn2.grid(column=0, row=1, sticky='w')
 
-        check_btn3 = Checkbutton(self.frame2, text="График дебита жидкости", variable=self.graph_water, padx=5, pady=5,
-                                 bg='lightblue')
-        check_btn3.grid(column=0, row=2, sticky='w')
+        self.check_btn3 = Checkbutton(self.frame2, text="График дебита жидкости", variable=self.graph_water, padx=5,
+                                      pady=5,
+                                      bg='lightblue')
+        self.check_btn3.grid(column=0, row=2, sticky='w')
 
-        check_btn4 = Checkbutton(self.frame2, text="График ГФ", variable=self.graph_gf, padx=5, pady=5, bg='lightblue')
-        check_btn4.grid(column=0, row=3, sticky='w')
+        self.check_btn4 = Checkbutton(self.frame2, text="График ГФ", variable=self.graph_gf, padx=5, pady=5,
+                                      bg='lightblue')
+        self.check_btn4.grid(column=0, row=3, sticky='w')
 
-        check_btn5 = Checkbutton(self.frame2, text="График давления", variable=self.graph_pressure,
-                                 padx=5, pady=5, bg='lightblue')
-        check_btn5.grid(column=0, row=4, sticky='w')
+        self.check_btn5 = Checkbutton(self.frame2, text="График давления", variable=self.graph_pressure,
+                                      padx=5, pady=5, bg='lightblue')
+        self.check_btn5.grid(column=0, row=4, sticky='w')
 
-        check_btn6 = Checkbutton(self.frame2, text="График обводненности", variable=self.graph_water_cut,
-                                 padx=5, pady=5, bg='lightblue')
-        check_btn6.grid(column=0, row=5, sticky='w')
+        self.check_btn6 = Checkbutton(self.frame2, text="График обводненности", variable=self.graph_water_cut,
+                                      padx=5, pady=5, bg='lightblue')
+        self.check_btn6.grid(column=0, row=5, sticky='w')
 
-        btn4 = Button(self.frame2, text="Построить график", command=self.Graphic, font="Arial 10", bg='white',
-                      width=15)
-        btn4.grid(column=0, row=6, padx=5, pady=5)
+        self.btn4 = Button(self.frame2, text="Построить график", command=self.Graphic, font="Arial 10", bg='white',
+                           width=15)
+        self.btn4.grid(column=0, row=6, padx=5, pady=5)
 
-        btn5 = Button(self.frame2, text="Сравнить графики", command=self.Graphics, font="Arial 10", bg='white',
-                      width=15)
-        btn5.grid(column=0, row=7, padx=5, pady=5)
+        self.btn5 = Button(self.frame2, text="Сравнить графики", command=self.Graphics, font="Arial 10", bg='white',
+                           width=15)
+        self.btn5.grid(column=0, row=7, padx=5, pady=5)
 
     def download_file(self):
         download = Download(self)
@@ -158,6 +160,7 @@ class Widget(Tk):
         self.method = 1
 
         self.frame1.destroy()
+        self.frame3.destroy()
 
         self.frame1 = Frame(self)
         self.frame1.config(bg='lightblue')
@@ -284,9 +287,8 @@ class Widget(Tk):
         self.borehole.Standard()
 
     def Writer(self):
-        writer = pd.ExcelWriter('Two.xlsx')
-        self.borehole.df.iloc[:, :-1].to_excel(writer)
-        writer.save()
+        with pd.ExcelWriter("Two.xlsx",  mode="a", engine="openpyxl", if_sheet_exists="replace") as writer:
+            self.borehole.df.iloc[:, :-1].to_excel(writer, sheet_name=f'{self.borehole.name}')
 
     def Cancel(self):
         self.borehole.df = self.borehole.df_copy.copy()
