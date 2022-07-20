@@ -40,12 +40,12 @@ class Download(Toplevel):
                                 bg='white')
         self.btn2.grid(column=2, row=2, padx=5, pady=5)
 
-        self.btn3 = Button(self, text="Загрузить данные скважины", command=lambda: self.loading(parent), width=22,
+        self.btn3 = Button(self, text="Загрузить", command=lambda: self.loading(parent), width=22,
                            font="Arial 10",
                            bg='lightblue')
         self.btn3.grid(column=0, row=3, padx=10, pady=10)
 
-        self.btn4 = Button(self, text="Открыть данные скважины", command=lambda: self.open(parent, self.txt3.get()), width=22,
+        self.btn4 = Button(self, text="Открыть", command=lambda: self.open(parent, self.txt3.get()), width=22,
                            font="Arial 10",
                            bg='lightblue')
         self.btn4.grid(column=2, row=3, padx=10, pady=10)
@@ -77,6 +77,7 @@ class Widget(Tk):
 
         self.methodmenu = Menu(self.mainmenu, tearoff=0)
         self.methodmenu.add_command(label="DBscan", command=self.method_dbscan)
+        self.methodmenu.add_command(label="IsolationForest", command=self.method_isolation_forest)
 
         self.boreholemenu = Menu(self.mainmenu, tearoff=0)
         self.boreholemenu.add_command(label="Отфильтровать...", command=self.Remove)
@@ -186,10 +187,38 @@ class Widget(Tk):
         lbl1 = Label(self.frame1, text='Eps:', font="Arial 10", bg='lightblue')
         lbl1.pack(side='right', padx=5, pady=5)
 
+    def method_isolation_forest(self):
+        self.lbl2.config(text=f'IsolationForest')
+        self.method = 1
+
+        self.frame1.destroy()
+        self.frame3.destroy()
+
+        self.frame1 = Frame(self)
+        self.frame1.config(bg='lightblue')
+        self.frame1.pack(side='top')
+
+        btn1 = Button(self.frame1, text="IsolationForest", command=lambda: self.IsolationForest(float(txt1.get())),
+                      font="Arial 10", bg='white', width=15)
+        btn1.pack(side='right', padx=5, pady=5)
+
+        txt1 = Entry(self.frame1, width=10, font="Arial 10", justify='center', bg='white')
+        txt1.pack(side='right', padx=5, pady=5)
+
+        lbl2 = Label(self.frame1, text='Сontamination:', font="Arial 10", bg='lightblue')
+        lbl2.pack(side='right', padx=5, pady=5)
+
     def DBscan(self, eps, elements):
         self.borehole.df_copy = self.borehole.df.copy()
         dbscan = DBSCAN(eps=eps, min_samples=elements).fit(self.borehole.x_principal)
         self.borehole.df['Cluster'] = dbscan.labels_
+
+    def IsolationForest(self, cont):
+        graph = [self.graph_oil.get(), self.graph_gas.get(), self.graph_water.get(), self.graph_gf.get(),
+                 self.graph_pressure.get(), self.graph_water_cut.get()]
+        forest = IsolationForest(n_estimators=1000, contamination=cont, max_features=sum(graph), random_state=42).fit_predict(
+            self.borehole.x_scaled.iloc[:, [i for i, v in enumerate(graph) if v == 1]].values)
+        self.borehole.df['Cluster'] = forest
 
     def Color(self):
         stake_color = len(set(self.borehole.df['Cluster'])) * ['black']
@@ -287,7 +316,7 @@ class Widget(Tk):
         self.borehole.Standard()
 
     def Writer(self):
-        with pd.ExcelWriter("Two.xlsx",  mode="a", engine="openpyxl", if_sheet_exists="replace") as writer:
+        with pd.ExcelWriter("Two.xlsx", mode="a", engine="openpyxl", if_sheet_exists="replace") as writer:
             self.borehole.df.iloc[:, :-1].to_excel(writer, sheet_name=f'{self.borehole.name}')
 
     def Cancel(self):
