@@ -1,12 +1,8 @@
-import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import matplotlib.colors as palette
 from openpyxl import load_workbook
-from sklearn.cluster import DBSCAN
 from sklearn.decomposition import PCA
-from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler
+
 
 class Borehole:
 
@@ -29,16 +25,13 @@ class Borehole:
         for row in ws[f'{start}2':f'{end}2']:
             for cell in row:
                 date.append(cell.value)
-        progress = 0
         for i in [num_data + 2, num_data + 3, num_data + 4, num_data + 6,
                   num_data + 10, num_data + self.pressure]:
-            progress += 100/6
             data_row = []
             for row in ws[f'{start}{i}':f'{end}{i}']:
                 for cell in row:
                     data_row.append(cell.value)
             data.append(data_row)
-            yield progress
         self.name = ws[f'A{num_data}'].value
         self.df = pd.DataFrame(data, index=[self.param[2], self.param[3], self.param[4], self.param[6], self.param[10],
                                             self.param[self.pressure]], columns=date)
@@ -50,115 +43,23 @@ class Borehole:
                 self.df.drop(index=cell, inplace=True)
         wb.close()
 
-        writer = pd.ExcelWriter('One.xlsx')
-        self.df.to_excel(writer)
-        writer.save()
-
-        wb = load_workbook(filename='One.xlsx')
-        wb[f'{wb.sheetnames[0]}']['A1'].value = self.name
-        wb.save(filename='One.xlsx')
-        wb.close()
-
-        self.Read()
-
-    def Read(self):
-        wb = load_workbook(filename='One.xlsx', read_only=True)
-        self.name = wb[f'{wb.sheetnames[0]}']['A1'].value
-        self.pressure = self.param.index(wb[f'{wb.sheetnames[0]}']['G1'].value)
-        wb.close()
-
-        self.df = pd.read_excel('One.xlsx', sheet_name=f'{wb.sheetnames[0]}', index_col=0)
+        with pd.ExcelWriter("One.xlsx", mode="a", engine="openpyxl", if_sheet_exists="replace") as writer:
+            self.df.to_excel(writer, sheet_name=f'{self.name}')
 
         self.Standard()
 
-    def Standard(self):
+    def Read(self, sheet):
 
+        self.df = pd.read_excel('One.xlsx', sheet_name=f'{sheet}', index_col=0)
+        self.name = sheet
+        self.pressure = self.param.index(f'{self.df.columns[-1]}')
+        self.Standard()
+
+    def Standard(self):
         self.x_scaled = StandardScaler().fit_transform(self.df)
+        self.x_scaled = pd.DataFrame(self.x_scaled)
 
         self.x_principal = PCA(n_components=2).fit_transform(self.x_scaled)
         self.x_principal = pd.DataFrame(self.x_principal)
 
         self.df['Cluster'] = 0
-
-    def Epsilon(self, k):
-        nbrs = NearestNeighbors(n_neighbors=k).fit(self.x_principal)
-        distances, indices = nbrs.kneighbors(self.x_principal)
-        distances = np.sort(distances[:, 1:].mean(axis=1))
-        plt.figure(figsize=(10, 5))
-        plt.plot(distances)
-        plt.title(f'{k}-distance Graph', fontsize=10)
-        plt.xlabel('Data Points sorted by distance', fontsize=7)
-        plt.ylabel('Epsilon', fontsize=7)
-        plt.grid(True)
-        plt.show()
-
-    def DBscan(self, eps, elements):
-        dbscan = DBSCAN(eps=eps, min_samples=elements).fit(self.x_principal)
-        self.df['Cluster'] = dbscan.labels_
-
-    def Color(self, rainbow):
-        if rainbow:
-            stake_color = list(palette.CSS4_COLORS.values())[10:]
-        else:
-            stake_color = len(set(self.df['Cluster'])) * ['black']
-        stake_cluster = set(self.df['Cluster'])
-        clusterColor = dict(zip(stake_cluster, stake_color))
-        clusterColor[-1] = 'red'
-        return [clusterColor[label] for label in self.df['Cluster']]
-
-    def Clustering(self):
-        plt.figure(figsize=(10, 8))
-        plt.scatter(self.x_principal.iloc[:, 0], self.x_principal.iloc[:, 1], s=15, c=self.Color(0))
-        plt.title('DBSCAN emissions', fontname='Times New Roman', fontweight='bold')
-        plt.show()
-
-    def Graphics_oil(self):
-        plt.figure(figsize=(10, 5))
-        plt.scatter(self.df.index.tolist(), self.df[self.param[6]], s=15, c=self.Color(0))
-        plt.title(f'{self.param[6]}', fontname='Times New Roman', fontweight='bold')
-        plt.grid(True)
-        plt.show()
-
-    def Graphics_gas(self):
-        plt.figure(figsize=(10, 5))
-        plt.scatter(self.df.index.tolist(), self.df[self.param[3]], s=15, c=self.Color(0))
-        plt.title(f'{self.param[3]}', fontname='Times New Roman', fontweight='bold')
-        plt.grid(True)
-        plt.show()
-
-    def Graphics_water(self):
-        plt.figure(figsize=(10, 5))
-        plt.scatter(self.df.index.tolist(), self.df[self.param[2]], s=15, c=self.Color(0))
-        plt.title(f'{self.param[2]}', fontname='Times New Roman', fontweight='bold')
-        plt.grid(True)
-        plt.show()
-
-    def Graphics_gf(self):
-        plt.figure(figsize=(10, 5))
-        plt.scatter(self.df.index.tolist(), self.df[self.param[10]], s=15, c=self.Color(0))
-        plt.title(f'{self.param[10]}', fontname='Times New Roman', fontweight='bold')
-        plt.grid(True)
-        plt.show()
-
-    def Graphics_pressure(self):
-        plt.figure(figsize=(10, 5))
-        plt.scatter(self.df.index.tolist(), self.df[self.param[self.pressure]], s=15, c=self.Color(0))
-        plt.title(f'{self.param[self.pressure]}', fontname="Times New Roman", fontweight="bold")
-        plt.grid(True)
-        plt.show()
-
-    def Graphics_water_cut(self):
-        plt.figure(figsize=(10, 5))
-        plt.scatter(self.df.index.tolist(), self.df[self.param[4]], s=15, c=self.Color(0))
-        plt.title(f'{self.param[4]}', fontname="Times New Roman", fontweight="bold")
-        plt.grid(True)
-        plt.show()
-
-    def Remove(self):
-        self.df = self.df.loc[self.df['Cluster'] != -1]
-        self.Standard()
-
-    def Writer(self):
-        writer = pd.ExcelWriter('Two.xlsx')
-        self.df.iloc[:, :-1].to_excel(writer)
-        writer.save()

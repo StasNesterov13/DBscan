@@ -1,5 +1,11 @@
 from tkinter import *
 from Borehole import *
+from sklearn.ensemble import IsolationForest
+from sklearn.neighbors import LocalOutlierFactor
+from sklearn.neighbors import NearestNeighbors
+from sklearn.cluster import DBSCAN
+import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk, FigureCanvasTkAgg
 
 
@@ -40,23 +46,24 @@ class Download(Toplevel):
                                 bg='white')
         self.btn2.grid(column=2, row=2, padx=5, pady=5)
 
-        self.btn3 = Button(self, text="Загрузить", command=lambda: self.loading(parent), width=22,
+        self.btn3 = Button(self, text="Загрузить", command=lambda: self.Loading(parent), width=22,
                            font="Arial 10",
                            bg='lightblue')
         self.btn3.grid(column=0, row=3, padx=10, pady=10)
 
-        self.btn4 = Button(self, text="Открыть", command=lambda: self.open(parent, self.txt3.get()), width=22,
+        self.btn4 = Button(self, text="Открыть", command=lambda: self.Open(parent, self.txt3.get()), width=22,
                            font="Arial 10",
                            bg='lightblue')
         self.btn4.grid(column=2, row=3, padx=10, pady=10)
 
-    def loading(self, parent):
+    def Loading(self, parent):
         parent.borehole.Creature(self.txt1.get(), self.txt2.get(), int(self.txt3.get()), parent.var.get())
         parent.lbl1.config(text=f'{parent.borehole.name}')
         self.destroy()
 
-    def open(self, parent, sheet):
+    def Open(self, parent, sheet):
         parent.borehole.Read(sheet)
+        parent.borehole_copy.Read(sheet)
         parent.lbl1.config(text=f'{parent.borehole.name}')
         self.destroy()
 
@@ -72,12 +79,13 @@ class Widget(Tk):
         self.config(menu=self.mainmenu)
 
         self.filemenu = Menu(self.mainmenu, tearoff=0)
-        self.filemenu.add_command(label="Загрузить или открыть...", command=self.download_file)
+        self.filemenu.add_command(label="Загрузить или открыть...", command=self.Download_file)
         self.filemenu.add_command(label="Сохранить...", command=self.Writer)
 
         self.methodmenu = Menu(self.mainmenu, tearoff=0)
-        self.methodmenu.add_command(label="DBscan", command=self.method_dbscan)
-        self.methodmenu.add_command(label="IsolationForest", command=self.method_isolation_forest)
+        self.methodmenu.add_command(label="DBscan", command=self.Method_dbscan)
+        self.methodmenu.add_command(label="IsolationForest", command=self.Method_isolation_forest)
+        self.methodmenu.add_command(label="LocalOutlierFactor", command=self.Method_local_outlier_factor)
 
         self.boreholemenu = Menu(self.mainmenu, tearoff=0)
         self.boreholemenu.add_command(label="Отфильтровать...", command=self.Remove)
@@ -90,6 +98,7 @@ class Widget(Tk):
                                   menu=self.boreholemenu)
 
         self.borehole = Borehole()
+        self.borehole_copy = Borehole()
 
         self.var = IntVar()
         self.graph_oil = IntVar(value=0)
@@ -113,34 +122,34 @@ class Widget(Tk):
 
         self.frame2 = Frame(self)
         self.frame2.config(bg='lightblue')
-        self.frame2.pack(side='right', fill='y', pady=200)
+        self.frame2.pack(side='right', fill='y', pady=130)
 
         self.frame3 = Frame(self)
         self.frame3.config(bg='white')
         self.frame3.pack(side='bottom', fill='both')
 
-        self.check_btn1 = Checkbutton(self.frame2, text="График дебита нефти", variable=self.graph_oil, padx=5, pady=5,
+        self.check_btn1 = Checkbutton(self.frame2, text="Дебит нефти", variable=self.graph_oil, padx=5, pady=5,
                                       bg='lightblue')
         self.check_btn1.grid(column=0, row=0, sticky='w')
 
-        self.check_btn2 = Checkbutton(self.frame2, text="График дебита газа", variable=self.graph_gas, padx=5, pady=5,
+        self.check_btn2 = Checkbutton(self.frame2, text="Дебит газа", variable=self.graph_gas, padx=5, pady=5,
                                       bg='lightblue')
         self.check_btn2.grid(column=0, row=1, sticky='w')
 
-        self.check_btn3 = Checkbutton(self.frame2, text="График дебита жидкости", variable=self.graph_water, padx=5,
+        self.check_btn3 = Checkbutton(self.frame2, text="Дебит жидкости", variable=self.graph_water, padx=5,
                                       pady=5,
                                       bg='lightblue')
         self.check_btn3.grid(column=0, row=2, sticky='w')
 
-        self.check_btn4 = Checkbutton(self.frame2, text="График ГФ", variable=self.graph_gf, padx=5, pady=5,
+        self.check_btn4 = Checkbutton(self.frame2, text="ГФ", variable=self.graph_gf, padx=5, pady=5,
                                       bg='lightblue')
         self.check_btn4.grid(column=0, row=3, sticky='w')
 
-        self.check_btn5 = Checkbutton(self.frame2, text="График давления", variable=self.graph_pressure,
+        self.check_btn5 = Checkbutton(self.frame2, text="Давление", variable=self.graph_pressure,
                                       padx=5, pady=5, bg='lightblue')
         self.check_btn5.grid(column=0, row=4, sticky='w')
 
-        self.check_btn6 = Checkbutton(self.frame2, text="График обводненности", variable=self.graph_water_cut,
+        self.check_btn6 = Checkbutton(self.frame2, text="Обводненность", variable=self.graph_water_cut,
                                       padx=5, pady=5, bg='lightblue')
         self.check_btn6.grid(column=0, row=5, sticky='w')
 
@@ -152,11 +161,22 @@ class Widget(Tk):
                            width=15)
         self.btn5.grid(column=0, row=7, padx=5, pady=5)
 
-    def download_file(self):
+        self.txt = Entry(self.frame2, width=10, font="Arial 10", justify='center', bg='white')
+        self.txt.grid(column=0, row=8, padx=5, pady=5)
+
+        self.btn6 = Button(self.frame2, text="Часть данных", command=self.Part, font="Arial 10", bg='white',
+                           width=15)
+        self.btn6.grid(column=0, row=9, padx=5, pady=5)
+
+        self.btn7 = Button(self.frame2, text="Все данные", command=self.All, font="Arial 10", bg='white',
+                           width=15)
+        self.btn7.grid(column=0, row=10, padx=5, pady=5)
+
+    def Download_file(self):
         download = Download(self)
         download.grab_set()
 
-    def method_dbscan(self):
+    def Method_dbscan(self):
         self.lbl2.config(text=f'DBscan')
         self.method = 1
 
@@ -187,9 +207,11 @@ class Widget(Tk):
         lbl1 = Label(self.frame1, text='Eps:', font="Arial 10", bg='lightblue')
         lbl1.pack(side='right', padx=5, pady=5)
 
-    def method_isolation_forest(self):
+        self.Graphic()
+
+    def Method_isolation_forest(self):
         self.lbl2.config(text=f'IsolationForest')
-        self.method = 1
+        self.method = 2
 
         self.frame1.destroy()
         self.frame3.destroy()
@@ -205,20 +227,62 @@ class Widget(Tk):
         txt1 = Entry(self.frame1, width=10, font="Arial 10", justify='center', bg='white')
         txt1.pack(side='right', padx=5, pady=5)
 
-        lbl2 = Label(self.frame1, text='Сontamination:', font="Arial 10", bg='lightblue')
+        lbl1 = Label(self.frame1, text='Сontamination:', font="Arial 10", bg='lightblue')
+        lbl1.pack(side='right', padx=5, pady=5)
+
+        self.Graphic()
+
+    def Method_local_outlier_factor(self):
+        self.lbl2.config(text=f'LocalOutlierFactor')
+        self.method = 3
+
+        self.frame1.destroy()
+        self.frame3.destroy()
+
+        self.frame1 = Frame(self)
+        self.frame1.config(bg='lightblue')
+        self.frame1.pack(side='top')
+
+        btn1 = Button(self.frame1, text="LocalOutlierFactor",
+                      command=lambda: self.LocalOutlierFactor(int(txt2.get()), float(txt1.get())),
+                      font="Arial 10", bg='white', width=15)
+        btn1.pack(side='right', padx=5, pady=5)
+
+        txt1 = Entry(self.frame1, width=10, font="Arial 10", justify='center', bg='white')
+        txt1.pack(side='right', padx=5, pady=5)
+
+        lbl1 = Label(self.frame1, text='Сontamination:', font="Arial 10", bg='lightblue')
+        lbl1.pack(side='right', padx=5, pady=5)
+
+        txt2 = Entry(self.frame1, width=10, font="Arial 10", justify='center', bg='white')
+        txt2.pack(side='right', padx=5, pady=5)
+
+        lbl2 = Label(self.frame1, text='Neighbors:', font="Arial 10", bg='lightblue')
         lbl2.pack(side='right', padx=5, pady=5)
 
+        self.Graphic()
+
     def DBscan(self, eps, elements):
-        self.borehole.df_copy = self.borehole.df.copy()
-        dbscan = DBSCAN(eps=eps, min_samples=elements).fit(self.borehole.x_principal)
+        dbscan = DBSCAN(eps=eps, min_samples=elements).fit(self.borehole.x_scaled)
         self.borehole.df['Cluster'] = dbscan.labels_
+        self.borehole_copy.df.loc[self.borehole.df.index[self.borehole.df['Cluster'] == -1].tolist(), 'Cluster'] = -1
+        self.Graphic()
 
     def IsolationForest(self, cont):
         graph = [self.graph_oil.get(), self.graph_gas.get(), self.graph_water.get(), self.graph_gf.get(),
                  self.graph_pressure.get(), self.graph_water_cut.get()]
-        forest = IsolationForest(n_estimators=1000, contamination=cont, max_features=sum(graph), random_state=42).fit_predict(
+        forest = IsolationForest(n_estimators=1000, contamination=cont, max_features=sum(graph),
+                                 random_state=42).fit_predict(
             self.borehole.x_scaled.iloc[:, [i for i, v in enumerate(graph) if v == 1]].values)
         self.borehole.df['Cluster'] = forest
+        self.borehole_copy.df.loc[self.borehole.df.index[self.borehole.df['Cluster'] == -1].tolist(), 'Cluster'] = -1
+        self.Graphic()
+
+    def LocalOutlierFactor(self, neighbors, cont):
+        local = LocalOutlierFactor(n_neighbors=neighbors, contamination=cont).fit_predict(self.borehole.x_scaled)
+        self.borehole.df['Cluster'] = local
+        self.borehole_copy.df.loc[self.borehole.df.index[self.borehole.df['Cluster'] == -1].tolist(), 'Cluster'] = -1
+        self.Graphic()
 
     def Color(self):
         stake_color = len(set(self.borehole.df['Cluster'])) * ['black']
@@ -234,8 +298,8 @@ class Widget(Tk):
         self.frame3.config(bg='white')
         self.frame3.pack(side='bottom', fill='both')
 
-        nbrs = NearestNeighbors(n_neighbors=k).fit(self.borehole.x_principal)
-        distances, indices = nbrs.kneighbors(self.borehole.x_principal)
+        nbrs = NearestNeighbors(n_neighbors=k).fit(self.borehole.x_scaled)
+        distances, indices = nbrs.kneighbors(self.borehole.x_scaled)
         distances = np.sort(distances[:, 1:].mean(axis=1))
 
         fig = plt.figure(figsize=(15, 10))
@@ -310,17 +374,24 @@ class Widget(Tk):
         canvas.draw()
         canvas.get_tk_widget().pack()
 
+    def Part(self):
+        self.borehole.df = self.borehole.df.iloc[:int(self.txt.get()), :]
+        self.borehole.Standard()
+
+    def All(self):
+        self.borehole = self.borehole_copy
+
     def Remove(self):
-        self.borehole.df_copy = self.borehole.df.copy()
         self.borehole.df = self.borehole.df.loc[self.borehole.df['Cluster'] != -1]
         self.borehole.Standard()
+        self.Graphic()
 
     def Writer(self):
         with pd.ExcelWriter("Two.xlsx", mode="a", engine="openpyxl", if_sheet_exists="replace") as writer:
             self.borehole.df.iloc[:, :-1].to_excel(writer, sheet_name=f'{self.borehole.name}')
 
     def Cancel(self):
-        self.borehole.df = self.borehole.df_copy.copy()
+        self.Graphic()
 
 
 if __name__ == '__main__':
