@@ -65,6 +65,7 @@ class Download(Toplevel):
         parent.borehole.Read(sheet)
         parent.borehole_copy.Read(sheet)
         parent.lbl1.config(text=f'{parent.borehole.name}')
+        parent.Graphic()
         self.destroy()
 
 
@@ -101,7 +102,7 @@ class Widget(Tk):
         self.borehole_copy = Borehole()
 
         self.var = IntVar()
-        self.graph_oil = IntVar(value=0)
+        self.graph_oil = IntVar(value=1)
         self.graph_gas = IntVar()
         self.graph_water = IntVar()
         self.graph_gf = IntVar()
@@ -263,25 +264,25 @@ class Widget(Tk):
         self.Graphic()
 
     def DBscan(self, eps, elements):
+        self.borehole.Standard()
         dbscan = DBSCAN(eps=eps, min_samples=elements).fit(self.borehole.x_scaled)
         self.borehole.df['Cluster'] = dbscan.labels_
-        self.borehole_copy.df.loc[self.borehole.df.index[self.borehole.df['Cluster'] == -1].tolist(), 'Cluster'] = -1
         self.Graphic()
 
     def IsolationForest(self, cont):
+        self.borehole.Standard()
         graph = [self.graph_oil.get(), self.graph_gas.get(), self.graph_water.get(), self.graph_gf.get(),
                  self.graph_pressure.get(), self.graph_water_cut.get()]
         forest = IsolationForest(n_estimators=1000, contamination=cont, max_features=sum(graph),
-                                 random_state=42).fit_predict(
+                                 random_state=42, bootstrap=True).fit_predict(
             self.borehole.x_scaled.iloc[:, [i for i, v in enumerate(graph) if v == 1]].values)
         self.borehole.df['Cluster'] = forest
-        self.borehole_copy.df.loc[self.borehole.df.index[self.borehole.df['Cluster'] == -1].tolist(), 'Cluster'] = -1
         self.Graphic()
 
     def LocalOutlierFactor(self, neighbors, cont):
+        self.borehole.Standard()
         local = LocalOutlierFactor(n_neighbors=neighbors, contamination=cont).fit_predict(self.borehole.x_scaled)
         self.borehole.df['Cluster'] = local
-        self.borehole_copy.df.loc[self.borehole.df.index[self.borehole.df['Cluster'] == -1].tolist(), 'Cluster'] = -1
         self.Graphic()
 
     def Color(self):
@@ -292,6 +293,7 @@ class Widget(Tk):
         return [clusterColor[label] for label in self.borehole.df['Cluster']]
 
     def Epsilon(self, k):
+        self.borehole.Standard()
         self.frame3.destroy()
 
         self.frame3 = Frame(self)
@@ -334,7 +336,6 @@ class Widget(Tk):
                        c=self.Color())
             ax.set(ylabel=f'{parametr[graph.index(1)]}')
             ax.grid(True)
-
         canvas = FigureCanvasTkAgg(fig, master=self.frame3)
         toolbar = NavigationToolbar2Tk(canvas, self.frame3)
         toolbar.update()
@@ -375,15 +376,23 @@ class Widget(Tk):
         canvas.get_tk_widget().pack()
 
     def Part(self):
+        if self.borehole.df.size != self.borehole_copy.df.size:
+            self.All()
         self.borehole.df = self.borehole.df.iloc[:int(self.txt.get()), :]
-        self.borehole.Standard()
+        print(self.borehole.df)
+        self.borehole_copy.df = self.borehole_copy.df.iloc[int(self.txt.get()):, :]
+        print(self.borehole_copy.df)
+        self.Graphic()
 
     def All(self):
-        self.borehole = self.borehole_copy
+        self.borehole_copy.df = self.borehole_copy.df.append(self.borehole.df)
+        self.borehole_copy.df.sort_index(inplace=True)
+        self.borehole.df = self.borehole_copy.df.copy(deep=True)
+        self.Graphic()
 
     def Remove(self):
+        print(self.borehole.df.loc[self.borehole.df['Cluster'] == -1])
         self.borehole.df = self.borehole.df.loc[self.borehole.df['Cluster'] != -1]
-        self.borehole.Standard()
         self.Graphic()
 
     def Writer(self):
