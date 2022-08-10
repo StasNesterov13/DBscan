@@ -58,13 +58,14 @@ class Download(Toplevel):
 
     def Loading(self, parent):
         parent.borehole.Creature(self.txt1.get(), self.txt2.get(), int(self.txt3.get()), parent.var.get())
-        parent.lbl1.config(text=f'{parent.borehole.name}')
-        self.destroy()
+        self.Open(parent, self.txt3.get())
 
     def Open(self, parent, sheet):
         parent.borehole.Read(sheet)
         parent.borehole_copy.Read(sheet)
         parent.lbl1.config(text=f'{parent.borehole.name}')
+        parent.txt1.insert(0, parent.borehole.df.index[0])
+        parent.txt2.insert(0, parent.borehole.df.index[-1])
         parent.Graphic()
         self.destroy()
 
@@ -95,7 +96,7 @@ class Widget(Tk):
                                   menu=self.filemenu)
         self.mainmenu.add_cascade(label="Метод",
                                   menu=self.methodmenu)
-        self.mainmenu.add_cascade(label="Скважина",
+        self.mainmenu.add_cascade(label="Обработка",
                                   menu=self.boreholemenu)
 
         self.borehole = Borehole()
@@ -108,6 +109,7 @@ class Widget(Tk):
         self.graph_gf = IntVar()
         self.graph_pressure = IntVar()
         self.graph_water_cut = IntVar()
+        self.data_part = IntVar(value=1)
 
         self.method = 0
 
@@ -162,20 +164,25 @@ class Widget(Tk):
                            width=15)
         self.btn5.grid(column=0, row=7, padx=5, pady=5)
 
-        self.txt = Entry(self.frame2, width=10, font="Arial 10", justify='center', bg='white')
-        self.txt.grid(column=0, row=8, padx=5, pady=5)
+        self.txt1 = Entry(self.frame2, width=20, font="Arial 10", justify='center', bg='white')
+        self.txt1.grid(column=0, row=8, padx=5, pady=5)
 
-        self.btn6 = Button(self.frame2, text="Часть данных", command=self.Part, font="Arial 10", bg='white',
-                           width=15)
-        self.btn6.grid(column=0, row=9, padx=5, pady=5)
+        self.txt2 = Entry(self.frame2, width=20, font="Arial 10", justify='center', bg='white')
+        self.txt2.grid(column=0, row=9, padx=5, pady=5)
 
-        self.btn7 = Button(self.frame2, text="Все данные", command=self.All, font="Arial 10", bg='white',
-                           width=15)
-        self.btn7.grid(column=0, row=10, padx=5, pady=5)
+        self.btn6 = Radiobutton(self.frame2, text="Часть данных", command=self.Part, variable=self.data_part, value=0,
+                                font="Arial 10", bg='lightblue',
+                                width=12)
+        self.btn6.grid(column=0, row=10, padx=5, pady=5)
+
+        self.btn7 = Radiobutton(self.frame2, text="Все данные", command=self.All, variable=self.data_part, value=1,
+                                font="Arial 10", bg='lightblue',
+                                width=12)
+        self.btn7.grid(column=0, row=11, padx=5, pady=5)
 
     def Download_file(self):
         download = Download(self)
-        download.grab_set()
+        download.tkraise(self)
 
     def Method_dbscan(self):
         self.lbl2.config(text=f'DBscan')
@@ -209,6 +216,8 @@ class Widget(Tk):
         lbl1.pack(side='right', padx=5, pady=5)
 
         self.Graphic()
+        self.update_idletasks()
+        print(self.borehole.df)
 
     def Method_isolation_forest(self):
         self.lbl2.config(text=f'IsolationForest')
@@ -232,6 +241,7 @@ class Widget(Tk):
         lbl1.pack(side='right', padx=5, pady=5)
 
         self.Graphic()
+        self.update_idletasks()
 
     def Method_local_outlier_factor(self):
         self.lbl2.config(text=f'LocalOutlierFactor')
@@ -262,6 +272,7 @@ class Widget(Tk):
         lbl2.pack(side='right', padx=5, pady=5)
 
         self.Graphic()
+        self.update_idletasks()
 
     def DBscan(self, eps, elements):
         self.borehole.Standard()
@@ -325,6 +336,7 @@ class Widget(Tk):
         self.frame3.pack(side='bottom', fill='both')
 
         fig = plt.figure(figsize=(20, 12))
+        plt.close(fig)
 
         graph = [self.graph_oil.get(), self.graph_gas.get(), self.graph_water.get(), self.graph_gf.get(),
                  self.graph_pressure.get(), self.graph_water_cut.get()]
@@ -341,6 +353,7 @@ class Widget(Tk):
         toolbar.update()
         canvas.draw()
         canvas.get_tk_widget().pack()
+        self.update_idletasks()
 
     def Graphics(self):
         self.frame3.destroy()
@@ -374,13 +387,14 @@ class Widget(Tk):
         toolbar.update()
         canvas.draw()
         canvas.get_tk_widget().pack()
+        self.update_idletasks()
 
     def Part(self):
         if self.borehole.df.size != self.borehole_copy.df.size:
             self.All()
-        self.borehole.df = self.borehole.df.iloc[:int(self.txt.get()), :]
-        print(self.borehole.df)
-        self.borehole_copy.df = self.borehole_copy.df.iloc[int(self.txt.get()):, :]
+        print(self.borehole_copy.df)
+        self.borehole.df = self.borehole.df.loc[self.txt1.get():self.txt2.get(), :]
+        self.borehole_copy.df = self.borehole_copy.df[~self.borehole_copy.df.index.isin(self.borehole.df.index.tolist())]
         print(self.borehole_copy.df)
         self.Graphic()
 
@@ -389,9 +403,9 @@ class Widget(Tk):
         self.borehole_copy.df.sort_index(inplace=True)
         self.borehole.df = self.borehole_copy.df.copy(deep=True)
         self.Graphic()
+        print(self.borehole_copy.df)
 
     def Remove(self):
-        print(self.borehole.df.loc[self.borehole.df['Cluster'] == -1])
         self.borehole.df = self.borehole.df.loc[self.borehole.df['Cluster'] != -1]
         self.Graphic()
 
@@ -405,4 +419,5 @@ class Widget(Tk):
 
 if __name__ == '__main__':
     widget = Widget()
+    widget.Download_file()
     widget.mainloop()
