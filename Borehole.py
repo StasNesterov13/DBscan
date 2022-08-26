@@ -49,7 +49,6 @@ class Borehole:
         self.Standard()
 
     def Read(self, sheet):
-
         self.df = pd.read_excel('One.xlsx', sheet_name=f'{sheet}', index_col=0)
         self.name = sheet
         self.pressure = self.param.index(f'{self.df.columns[-1]}')
