@@ -4,6 +4,7 @@ from sklearn.ensemble import IsolationForest
 from sklearn.neighbors import LocalOutlierFactor
 from sklearn.neighbors import NearestNeighbors
 from sklearn.cluster import DBSCAN
+import openpyxl
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk, FigureCanvasTkAgg
@@ -13,60 +14,59 @@ class Download(Toplevel):
     def __init__(self, parent):
         super().__init__(parent)
         self.title('Загрузка данных скважины')
-        self.geometry('575x200')
+        self.geometry('400x200')
         self.configure(bg='white')
         self.resizable(width=0, height=0)
+        self.boreholes = openpyxl.load_workbook('One.xlsx').sheetnames
+        self.boreholevar = StringVar(self)
+        self.boreholevar.set(self.boreholes[0])
 
         self.txt1 = Entry(self, width=20, font="Arial 10", justify='center', bg='lightblue')
-        self.txt1.grid(column=1, row=0, padx=5, pady=5)
-
-        self.lbl1 = Label(self, text='Дата начала', width=20, font="Arial 10", bg='white')
-        self.lbl1.grid(column=0, row=0, padx=5, pady=5)
+        self.txt1.grid(column=0, row=0, padx=5, pady=5)
 
         self.txt2 = Entry(self, width=20, font="Arial 10", justify='center', bg='lightblue')
-        self.txt2.grid(column=1, row=1, padx=5, pady=5)
+        self.txt2.grid(column=0, row=1, padx=5, pady=5)
 
-        self.lbl2 = Label(self, text='Дата окончания', width=20, font="Arial 10", bg='white')
-        self.lbl2.grid(column=0, row=1, padx=5, pady=5)
+        self.txt3 = OptionMenu(self, self.boreholevar, *self.boreholes)
+        self.txt3.config(width=20)
+        self.txt3.grid(column=0, row=2, padx=5, pady=5)
 
-        self.txt3 = Entry(self, width=20, font="Arial 10", justify='center', bg='lightblue')
-        self.txt3.grid(column=1, row=2, padx=5, pady=5)
+        self.txt4 = Entry(self, width=20, font="Arial 10", justify='center', bg='lightblue')
+        self.txt4.grid(column=1, row=0, padx=5, pady=5)
 
-        self.lbl3 = Label(self, text='Название скважины', width=20, font="Arial 10", bg='white')
-        self.lbl3.grid(column=0, row=2, padx=5, pady=5)
-
-        self.lbl4 = Label(self, text='Тип давления', width=21, font="Arial 10", bg='white')
-        self.lbl4.grid(column=2, row=0, padx=5, pady=5)
-
-        self.btn1 = Radiobutton(self, text="Рприем, атм", variable=parent.var, value=14, width=18, font="Arial 10",
+        self.btn1 = Radiobutton(self, text="Рприем, атм", variable=parent.var, value=14, width=20, font="Arial 10",
                                 bg='white')
-        self.btn1.grid(column=2, row=1, padx=5, pady=5)
+        self.btn1.grid(column=1, row=1, padx=5, pady=5)
 
-        self.btn2 = Radiobutton(self, text="Рзаб замер", variable=parent.var, value=16, width=18, font="Arial 10",
+        self.btn2 = Radiobutton(self, text="Рзаб замер", variable=parent.var, value=16, width=20, font="Arial 10",
                                 bg='white')
-        self.btn2.grid(column=2, row=2, padx=5, pady=5)
+        self.btn2.grid(column=1, row=2, padx=5, pady=5)
 
-        self.btn3 = Button(self, text="Загрузить", command=lambda: self.Loading(parent), width=22,
+        self.btn3 = Button(self, text="Загрузить", command=lambda: self.Loading(parent), width=20,
                            font="Arial 10",
                            bg='lightblue')
-        self.btn3.grid(column=0, row=3, padx=10, pady=10)
+        self.btn3.grid(column=1, row=3, padx=10, pady=10)
 
-        self.btn4 = Button(self, text="Открыть", command=lambda: self.Open(parent, self.txt3.get()), width=22,
+        self.btn4 = Button(self, text="Открыть", command=lambda: self.Open(parent, self.boreholevar.get()), width=20,
                            font="Arial 10",
                            bg='lightblue')
-        self.btn4.grid(column=2, row=3, padx=10, pady=10)
+        self.btn4.grid(column=0, row=3, padx=10, pady=10)
 
     def Loading(self, parent):
-        parent.borehole.Creature(self.txt1.get(), self.txt2.get(), int(self.txt3.get()), parent.var.get())
-        self.Open(parent, self.txt3.get())
+        parent.borehole.Creature('E', 'BNQ', int(self.txt4.get()), parent.var.get())
 
     def Open(self, parent, sheet):
         parent.borehole.Read(sheet)
         parent.borehole_copy.Read(sheet)
+        parent.borehole_list.clear()
+        parent.borehole_list.append(parent.borehole.df.copy(deep=True))
+
         parent.lbl1.config(text=f'{parent.borehole.name}')
-        parent.txt1.insert(0, parent.borehole.df.index[0])
-        parent.txt2.insert(0, parent.borehole.df.index[-1])
+
+        parent.Entry_date()
+
         parent.Graphic()
+        parent.deiconify()
         self.destroy()
 
 
@@ -101,6 +101,7 @@ class Widget(Tk):
 
         self.borehole = Borehole()
         self.borehole_copy = Borehole()
+        self.borehole_list = []
 
         self.var = IntVar()
         self.graph_oil = IntVar(value=1)
@@ -110,8 +111,7 @@ class Widget(Tk):
         self.graph_pressure = IntVar()
         self.graph_water_cut = IntVar()
         self.data_part = IntVar(value=1)
-
-        self.method = 0
+        self.dbscan_mode = IntVar(value=0)
 
         self.lbl1 = Label(self, text='Скважина', font="Arial 10", bg='lightblue')
         self.lbl1.pack(fill='x', side='bottom')
@@ -125,40 +125,45 @@ class Widget(Tk):
 
         self.frame2 = Frame(self)
         self.frame2.config(bg='lightblue')
-        self.frame2.pack(side='right', fill='y', pady=130)
+        self.frame2.pack(side='right', fill='y', pady=150)
 
         self.frame3 = Frame(self)
         self.frame3.config(bg='white')
         self.frame3.pack(side='bottom', fill='both')
 
-        self.check_btn1 = Checkbutton(self.frame2, text="Дебит нефти", variable=self.graph_oil, padx=5, pady=5,
+        self.frame4 = Frame(self)
+        self.frame4.config(bg='white')
+        self.frame4.pack(side='top', fill='x')
+
+        self.check_btn1 = Checkbutton(self.frame2, text="Дебит нефти", variable=self.graph_oil, command=self.Graphic,
+                                      padx=5, pady=5,
                                       bg='lightblue')
         self.check_btn1.grid(column=0, row=0, sticky='w')
 
-        self.check_btn2 = Checkbutton(self.frame2, text="Дебит газа", variable=self.graph_gas, padx=5, pady=5,
+        self.check_btn2 = Checkbutton(self.frame2, text="Дебит газа", variable=self.graph_gas, command=self.Graphic,
+                                      padx=5, pady=5,
                                       bg='lightblue')
         self.check_btn2.grid(column=0, row=1, sticky='w')
 
-        self.check_btn3 = Checkbutton(self.frame2, text="Дебит жидкости", variable=self.graph_water, padx=5,
+        self.check_btn3 = Checkbutton(self.frame2, text="Дебит жидкости", variable=self.graph_water,
+                                      command=self.Graphic, padx=5,
                                       pady=5,
                                       bg='lightblue')
         self.check_btn3.grid(column=0, row=2, sticky='w')
 
-        self.check_btn4 = Checkbutton(self.frame2, text="ГФ", variable=self.graph_gf, padx=5, pady=5,
+        self.check_btn4 = Checkbutton(self.frame2, text="ГФ", variable=self.graph_gf, command=self.Graphic, padx=5,
+                                      pady=5,
                                       bg='lightblue')
         self.check_btn4.grid(column=0, row=3, sticky='w')
 
-        self.check_btn5 = Checkbutton(self.frame2, text="Давление", variable=self.graph_pressure,
+        self.check_btn5 = Checkbutton(self.frame2, text="Давление", variable=self.graph_pressure, command=self.Graphic,
                                       padx=5, pady=5, bg='lightblue')
         self.check_btn5.grid(column=0, row=4, sticky='w')
 
         self.check_btn6 = Checkbutton(self.frame2, text="Обводненность", variable=self.graph_water_cut,
+                                      command=self.Graphic,
                                       padx=5, pady=5, bg='lightblue')
         self.check_btn6.grid(column=0, row=5, sticky='w')
-
-        self.btn4 = Button(self.frame2, text="Построить график", command=self.Graphic, font="Arial 10", bg='white',
-                           width=15)
-        self.btn4.grid(column=0, row=6, padx=5, pady=5)
 
         self.btn5 = Button(self.frame2, text="Сравнить графики", command=self.Graphics, font="Arial 10", bg='white',
                            width=15)
@@ -186,14 +191,18 @@ class Widget(Tk):
 
     def Method_dbscan(self):
         self.lbl2.config(text=f'DBscan')
-        self.method = 1
 
         self.frame1.destroy()
         self.frame3.destroy()
+        self.frame4.destroy()
 
         self.frame1 = Frame(self)
         self.frame1.config(bg='lightblue')
         self.frame1.pack(side='top', padx=200)
+
+        self.frame4 = Frame(self)
+        self.frame4.config(bg='lightblue')
+        self.frame4.pack(side='top', padx=200)
 
         btn2 = Button(self.frame1, text="K-distances graph", font="Arial 10",
                       command=lambda: self.Epsilon(int(txt2.get())), bg='white', width=15)
@@ -205,30 +214,46 @@ class Widget(Tk):
 
         txt2 = Entry(self.frame1, width=10, font="Arial 10", justify='center', bg='white')
         txt2.pack(side='right', padx=5, pady=5)
+        txt2.insert(0, '6')
 
         lbl2 = Label(self.frame1, text='MinElements:', font="Arial 10", bg='lightblue')
         lbl2.pack(side='right', padx=5, pady=5)
 
         txt1 = Entry(self.frame1, width=10, font="Arial 10", justify='center', bg='white')
         txt1.pack(side='right', padx=5, pady=5)
+        txt1.insert(0, '0.1')
 
         lbl1 = Label(self.frame1, text='Eps:', font="Arial 10", bg='lightblue')
         lbl1.pack(side='right', padx=5, pady=5)
 
+        btn2 = Radiobutton(self.frame4, text="Автоматически", variable=self.dbscan_mode,
+                           value=1,
+                           font="Arial 10", bg='lightblue',
+                           width=12)
+        btn2.pack(side='right', padx=5, pady=5)
+
+        btn3 = Radiobutton(self.frame4, text="Вручную", variable=self.dbscan_mode, value=0,
+                           font="Arial 10", bg='lightblue',
+                           width=12)
+        btn3.pack(side='right', padx=5, pady=5)
+
         self.Graphic()
         self.update_idletasks()
-        print(self.borehole.df)
 
     def Method_isolation_forest(self):
         self.lbl2.config(text=f'IsolationForest')
-        self.method = 2
 
         self.frame1.destroy()
         self.frame3.destroy()
+        self.frame4.destroy()
 
         self.frame1 = Frame(self)
         self.frame1.config(bg='lightblue')
         self.frame1.pack(side='top')
+
+        self.frame4 = Frame(self)
+        self.frame4.config(bg='lightblue')
+        self.frame4.pack(side='top', padx=200)
 
         btn1 = Button(self.frame1, text="IsolationForest", command=lambda: self.IsolationForest(float(txt1.get())),
                       font="Arial 10", bg='white', width=15)
@@ -240,19 +265,33 @@ class Widget(Tk):
         lbl1 = Label(self.frame1, text='Сontamination:', font="Arial 10", bg='lightblue')
         lbl1.pack(side='right', padx=5, pady=5)
 
+        btn2 = Radiobutton(self.frame4, text="Автоматически", variable=self.dbscan_mode, value=0,
+                           font="Arial 10", bg='lightblue',
+                           width=12)
+        btn2.pack(side='right', padx=5, pady=5)
+
+        btn3 = Radiobutton(self.frame4, text="Вручную", variable=self.dbscan_mode, value=1,
+                           font="Arial 10", bg='lightblue',
+                           width=12)
+        btn3.pack(side='right', padx=5, pady=5)
+
         self.Graphic()
         self.update_idletasks()
 
     def Method_local_outlier_factor(self):
         self.lbl2.config(text=f'LocalOutlierFactor')
-        self.method = 3
 
         self.frame1.destroy()
         self.frame3.destroy()
+        self.frame4.destroy()
 
         self.frame1 = Frame(self)
         self.frame1.config(bg='lightblue')
         self.frame1.pack(side='top')
+
+        self.frame4 = Frame(self)
+        self.frame4.config(bg='lightblue')
+        self.frame4.pack(side='top', padx=200)
 
         btn1 = Button(self.frame1, text="LocalOutlierFactor",
                       command=lambda: self.LocalOutlierFactor(int(txt2.get()), float(txt1.get())),
@@ -271,17 +310,51 @@ class Widget(Tk):
         lbl2 = Label(self.frame1, text='Neighbors:', font="Arial 10", bg='lightblue')
         lbl2.pack(side='right', padx=5, pady=5)
 
+        btn2 = Radiobutton(self.frame4, text="Автоматически", variable=self.dbscan_mode,
+                           value=1,
+                           font="Arial 10", bg='lightblue',
+                           width=12)
+        btn2.pack(side='right', padx=5, pady=5)
+
+        btn3 = Radiobutton(self.frame4, text="Вручную", variable=self.dbscan_mode, value=0,
+                           font="Arial 10", bg='lightblue',
+                           width=12)
+        btn3.pack(side='right', padx=5, pady=5)
+
         self.Graphic()
         self.update_idletasks()
 
-    def DBscan(self, eps, elements):
+    def DBscan_hand(self, eps, elements):
         self.borehole.Standard()
+        self.borehole_list.append(self.borehole.df.copy(deep=True))
+
         dbscan = DBSCAN(eps=eps, min_samples=elements).fit(self.borehole.x_scaled)
         self.borehole.df['Cluster'] = dbscan.labels_
         self.Graphic()
 
+    def DBscan_auto(self, elements):
+        while True:
+            try:
+                self.borehole.Standard()
+                nbrs = NearestNeighbors(n_neighbors=elements).fit(self.borehole.x_scaled)
+                distances, indices = nbrs.kneighbors(self.borehole.x_scaled)
+                distances = np.sort(distances[:, 1:].mean(axis=1))
+                dist_prime = distances[1:] - distances[:-1]
+                self.DBscan_hand(distances[np.argmax(dist_prime[1:] - dist_prime[:-1]) - 10], elements)
+                self.Remove()
+            except ValueError:
+                break
+
+    def DBscan(self, eps, elements):
+        if self.dbscan_mode.get():
+            self.DBscan_auto(elements)
+        else:
+            self.DBscan_hand(eps, elements)
+
     def IsolationForest(self, cont):
         self.borehole.Standard()
+        self.borehole_list.append(self.borehole.df.copy(deep=True))
+
         graph = [self.graph_oil.get(), self.graph_gas.get(), self.graph_water.get(), self.graph_gf.get(),
                  self.graph_pressure.get(), self.graph_water_cut.get()]
         forest = IsolationForest(n_estimators=1000, contamination=cont, max_features=sum(graph),
@@ -292,6 +365,8 @@ class Widget(Tk):
 
     def LocalOutlierFactor(self, neighbors, cont):
         self.borehole.Standard()
+        self.borehole_list.append(self.borehole.df.copy(deep=True))
+
         local = LocalOutlierFactor(n_neighbors=neighbors, contamination=cont).fit_predict(self.borehole.x_scaled)
         self.borehole.df['Cluster'] = local
         self.Graphic()
@@ -390,23 +465,37 @@ class Widget(Tk):
         self.update_idletasks()
 
     def Part(self):
-        if self.borehole.df.size != self.borehole_copy.df.size:
-            self.All()
-        print(self.borehole_copy.df)
+        self.borehole_list.append(self.borehole.df.copy(deep=True))
+        if self.borehole.df.index.tolist() != self.borehole_copy.df.index.tolist():
+            self.borehole_copy.df = self.borehole_copy.df.append(self.borehole.df)
+            self.borehole_copy.df.sort_index(inplace=True)
+            self.borehole.df = self.borehole_copy.df.copy(deep=True)
         self.borehole.df = self.borehole.df.loc[self.txt1.get():self.txt2.get(), :]
-        self.borehole_copy.df = self.borehole_copy.df[~self.borehole_copy.df.index.isin(self.borehole.df.index.tolist())]
-        print(self.borehole_copy.df)
+        self.borehole_copy.df = self.borehole_copy.df[
+            ~self.borehole_copy.df.index.isin(self.borehole.df.index.tolist())]
+        self.Entry_date()
         self.Graphic()
 
     def All(self):
+        self.borehole_list.append(self.borehole.df.copy(deep=True))
         self.borehole_copy.df = self.borehole_copy.df.append(self.borehole.df)
         self.borehole_copy.df.sort_index(inplace=True)
         self.borehole.df = self.borehole_copy.df.copy(deep=True)
+        self.Entry_date()
         self.Graphic()
-        print(self.borehole_copy.df)
 
     def Remove(self):
+        if self.borehole.df['Cluster'].isin([-1]).any():
+            self.borehole_list.append(self.borehole.df.copy(deep=True))
         self.borehole.df = self.borehole.df.loc[self.borehole.df['Cluster'] != -1]
+        if self.borehole.df.index.tolist() != self.borehole_copy.df.index.tolist():
+            self.borehole_copy.df = self.borehole_copy.df.append(self.borehole.df)
+            self.borehole_copy.df.sort_index(inplace=True)
+            self.borehole_copy.df = self.borehole_copy.df[
+                ~self.borehole_copy.df.index.isin(self.borehole.df.index.tolist())]
+        else:
+            self.borehole_copy.df = self.borehole_copy.df.loc[self.borehole.df.index]
+        self.Entry_date()
         self.Graphic()
 
     def Writer(self):
@@ -414,7 +503,21 @@ class Widget(Tk):
             self.borehole.df.iloc[:, :-1].to_excel(writer, sheet_name=f'{self.borehole.name}')
 
     def Cancel(self):
+        self.borehole_copy.df = self.borehole_copy.df.append(self.borehole.df)
+        self.borehole_copy.df.sort_index(inplace=True)
+        self.borehole.df = self.borehole_list[-1]
+        self.borehole_list.pop(-1)
+        if self.borehole.df.index[0] == self.borehole_copy.df.index[0] and self.borehole.df.index[-1] == \
+                self.borehole_copy.df.index[-1]:
+            self.data_part.set(value=1)
+        self.Entry_date()
         self.Graphic()
+
+    def Entry_date(self):
+        self.txt1.delete(0, END)
+        self.txt2.delete(0, END)
+        self.txt1.insert(0, self.borehole.df.index[0])
+        self.txt2.insert(0, self.borehole.df.index[-1])
 
 
 if __name__ == '__main__':

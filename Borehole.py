@@ -55,10 +55,11 @@ class Borehole:
         self.Standard()
 
     def Standard(self):
+        self.df['Cluster'] = 0
+
         self.x_scaled = StandardScaler().fit_transform(self.df)
         self.x_scaled = pd.DataFrame(self.x_scaled)
 
         self.x_principal = PCA(n_components=2).fit_transform(self.x_scaled)
         self.x_principal = pd.DataFrame(self.x_principal)
 
-        self.df['Cluster'] = 0
