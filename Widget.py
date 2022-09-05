@@ -7,6 +7,7 @@ from sklearn.cluster import DBSCAN
 import openpyxl
 import matplotlib.pyplot as plt
 import numpy as np
+import time
 from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk, FigureCanvasTkAgg
 
 
@@ -333,17 +334,15 @@ class Widget(Tk):
         self.Graphic()
 
     def DBscan_auto(self, elements):
-        while True:
-            try:
-                self.borehole.Standard()
-                nbrs = NearestNeighbors(n_neighbors=elements).fit(self.borehole.x_scaled)
-                distances, indices = nbrs.kneighbors(self.borehole.x_scaled)
-                distances = np.sort(distances[:, 1:].mean(axis=1))
-                dist_prime = distances[1:] - distances[:-1]
-                self.DBscan_hand(distances[np.argmax(dist_prime[1:] - dist_prime[:-1]) - 10], elements)
-                self.Remove()
-            except ValueError:
-                break
+        self.borehole.Standard()
+        nbrs = NearestNeighbors(n_neighbors=elements).fit(self.borehole.x_scaled)
+        distances, indices = nbrs.kneighbors(self.borehole.x_scaled)
+        distances = np.sort(distances[:, 1:].mean(axis=1))
+        dist_prime = distances[1:] - distances[:-1]
+        self.DBscan_hand(distances[np.argmax(dist_prime[1:] - dist_prime[:-1]) - 20], elements)
+        print(distances[np.argmax(dist_prime[1:] - dist_prime[:-1]) - 20])
+        time.sleep(1)
+        self.Remove()
 
     def DBscan(self, eps, elements):
         if self.dbscan_mode.get():
@@ -475,6 +474,7 @@ class Widget(Tk):
             ~self.borehole_copy.df.index.isin(self.borehole.df.index.tolist())]
         self.Entry_date()
         self.Graphic()
+        print(self.borehole.df[self.borehole.df['Cluster'] == -1])
 
     def All(self):
         self.borehole_list.append(self.borehole.df.copy(deep=True))
@@ -487,13 +487,14 @@ class Widget(Tk):
     def Remove(self):
         if self.borehole.df['Cluster'].isin([-1]).any():
             self.borehole_list.append(self.borehole.df.copy(deep=True))
-        self.borehole.df = self.borehole.df.loc[self.borehole.df['Cluster'] != -1]
         if self.borehole.df.index.tolist() != self.borehole_copy.df.index.tolist():
+            self.borehole.df = self.borehole.df.loc[self.borehole.df['Cluster'] != -1]
             self.borehole_copy.df = self.borehole_copy.df.append(self.borehole.df)
             self.borehole_copy.df.sort_index(inplace=True)
             self.borehole_copy.df = self.borehole_copy.df[
                 ~self.borehole_copy.df.index.isin(self.borehole.df.index.tolist())]
         else:
+            self.borehole.df = self.borehole.df.loc[self.borehole.df['Cluster'] != -1]
             self.borehole_copy.df = self.borehole_copy.df.loc[self.borehole.df.index]
         self.Entry_date()
         self.Graphic()
