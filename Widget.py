@@ -104,7 +104,7 @@ class Widget(Tk):
         self.borehole_copy = Borehole()
         self.borehole_list = []
 
-        self.var = IntVar()
+        self.var = IntVar(value=14)
         self.graph_oil = IntVar(value=1)
         self.graph_gas = IntVar()
         self.graph_water = IntVar()
@@ -126,7 +126,7 @@ class Widget(Tk):
 
         self.frame2 = Frame(self)
         self.frame2.config(bg='lightblue')
-        self.frame2.pack(side='right', fill='y', pady=150)
+        self.frame2.pack(side='right', fill='y')
 
         self.frame3 = Frame(self)
         self.frame3.config(bg='white')
@@ -176,15 +176,24 @@ class Widget(Tk):
         self.txt2 = Entry(self.frame2, width=20, font="Arial 10", justify='center', bg='white')
         self.txt2.grid(column=0, row=9, padx=5, pady=5)
 
-        self.btn6 = Radiobutton(self.frame2, text="Часть данных", command=self.Part, variable=self.data_part, value=0,
+        self.btn6 = Radiobutton(self.frame2, text="Part", command=self.Part, variable=self.data_part, value=0,
                                 font="Arial 10", bg='lightblue',
                                 width=12)
         self.btn6.grid(column=0, row=10, padx=5, pady=5)
 
-        self.btn7 = Radiobutton(self.frame2, text="Все данные", command=self.All, variable=self.data_part, value=1,
+        self.btn7 = Radiobutton(self.frame2, text="All", command=self.All, variable=self.data_part, value=1,
                                 font="Arial 10", bg='lightblue',
                                 width=12)
         self.btn7.grid(column=0, row=11, padx=5, pady=5)
+
+        self.lbl3 = Label(self.frame2, text='Прореживание значений', bg='lightblue')
+        self.lbl3.grid(column=0, row=12, padx=5, pady=5)
+
+        self.btn8 = Button(self.frame2, text="Каждые n", command=lambda: self.Thining(int(self.txt3.get())), font="Arial 10", width=12)
+        self.btn8.grid(column=0, row=13, padx=5, pady=5)
+
+        self.txt3 = Entry(self.frame2, width=20, font="Arial 10", justify='center', bg='white')
+        self.txt3.grid(column=0, row=14, padx=5, pady=5)
 
     def Download_file(self):
         download = Download(self)
@@ -262,19 +271,10 @@ class Widget(Tk):
 
         txt1 = Entry(self.frame1, width=10, font="Arial 10", justify='center', bg='white')
         txt1.pack(side='right', padx=5, pady=5)
+        txt1.insert(0, '0.1')
 
         lbl1 = Label(self.frame1, text='Сontamination:', font="Arial 10", bg='lightblue')
         lbl1.pack(side='right', padx=5, pady=5)
-
-        btn2 = Radiobutton(self.frame4, text="Автоматически", variable=self.dbscan_mode, value=0,
-                           font="Arial 10", bg='lightblue',
-                           width=12)
-        btn2.pack(side='right', padx=5, pady=5)
-
-        btn3 = Radiobutton(self.frame4, text="Вручную", variable=self.dbscan_mode, value=1,
-                           font="Arial 10", bg='lightblue',
-                           width=12)
-        btn3.pack(side='right', padx=5, pady=5)
 
         self.Graphic()
         self.update_idletasks()
@@ -301,26 +301,17 @@ class Widget(Tk):
 
         txt1 = Entry(self.frame1, width=10, font="Arial 10", justify='center', bg='white')
         txt1.pack(side='right', padx=5, pady=5)
+        txt1.insert(0, '0.1')
 
         lbl1 = Label(self.frame1, text='Сontamination:', font="Arial 10", bg='lightblue')
         lbl1.pack(side='right', padx=5, pady=5)
 
         txt2 = Entry(self.frame1, width=10, font="Arial 10", justify='center', bg='white')
         txt2.pack(side='right', padx=5, pady=5)
+        txt2.insert(0, '20')
 
         lbl2 = Label(self.frame1, text='Neighbors:', font="Arial 10", bg='lightblue')
         lbl2.pack(side='right', padx=5, pady=5)
-
-        btn2 = Radiobutton(self.frame4, text="Автоматически", variable=self.dbscan_mode,
-                           value=1,
-                           font="Arial 10", bg='lightblue',
-                           width=12)
-        btn2.pack(side='right', padx=5, pady=5)
-
-        btn3 = Radiobutton(self.frame4, text="Вручную", variable=self.dbscan_mode, value=0,
-                           font="Arial 10", bg='lightblue',
-                           width=12)
-        btn3.pack(side='right', padx=5, pady=5)
 
         self.Graphic()
         self.update_idletasks()
@@ -340,7 +331,6 @@ class Widget(Tk):
         distances = np.sort(distances[:, 1:].mean(axis=1))
         dist_prime = distances[1:] - distances[:-1]
         self.DBscan_hand(distances[np.argmax(dist_prime[1:] - dist_prime[:-1]) - 20], elements)
-        print(distances[np.argmax(dist_prime[1:] - dist_prime[:-1]) - 20])
         time.sleep(1)
         self.Remove()
 
@@ -422,6 +412,7 @@ class Widget(Tk):
                        c=self.Color())
             ax.set(ylabel=f'{parametr[graph.index(1)]}')
             ax.grid(True)
+
         canvas = FigureCanvasTkAgg(fig, master=self.frame3)
         toolbar = NavigationToolbar2Tk(canvas, self.frame3)
         toolbar.update()
@@ -511,6 +502,13 @@ class Widget(Tk):
         if self.borehole.df.index[0] == self.borehole_copy.df.index[0] and self.borehole.df.index[-1] == \
                 self.borehole_copy.df.index[-1]:
             self.data_part.set(value=1)
+        self.Entry_date()
+        self.Graphic()
+
+    def Thining(self, n):
+        self.borehole_list.append(self.borehole.df.copy(deep=True))
+        self.borehole.df = self.borehole.df[~self.borehole.df.index.isin(self.borehole.df.iloc[::n].index.tolist())]
+
         self.Entry_date()
         self.Graphic()
 
