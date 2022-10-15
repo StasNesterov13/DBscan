@@ -95,6 +95,7 @@ class Widget(Tk):
         self.methodmenu.add_command(label="IsolationForest", command=self.Method_isolation_forest)
         self.methodmenu.add_command(label="LocalOutlierFactor", command=self.Method_local_outlier_factor)
         self.methodmenu.add_command(label="Z-Score", command=self.Method_Z_score)
+        self.methodmenu.add_command(label="IQR", command=self.IQR)
 
         self.datamenu = Menu(self.mainmenu, tearoff=0)
         self.datamenu.add_radiobutton(label="All...",
@@ -412,8 +413,8 @@ class Widget(Tk):
         self.borehole.Standard()
         self.borehole_list.append(self.borehole.df.copy(deep=True))
 
-        graph = [self.graph_oil.get(), self.graph_gas.get(), self.graph_water.get(), self.graph_gf.get(),
-                 self.graph_pressure.get(), self.graph_water_cut.get()]
+        graph = [self.graph_water.get(), self.graph_gas.get(), self.graph_water_cut.get(), self.graph_oil.get(), self.graph_gf.get(),
+                 self.graph_pressure.get()]
         forest = IsolationForest(n_estimators=1000, contamination=cont, max_features=sum(graph),
                                  random_state=42, bootstrap=True).fit_predict(
             self.borehole.x_scaled.iloc[:, [i for i, v in enumerate(graph) if v == 1]].values)
@@ -429,19 +430,31 @@ class Widget(Tk):
         self.Graphic()
 
     def Zscore(self, score):
-        pd.set_option('display.max_rows', None)
-        pd.set_option('display.max_columns', None)
         self.borehole.Standard()
         self.borehole_list.append(self.borehole.df.copy(deep=True))
-        graph = [self.graph_oil.get(), self.graph_gas.get(), self.graph_water.get(), self.graph_gf.get(),
-                 self.graph_pressure.get(), self.graph_water_cut.get()]
+        graph = [self.graph_water.get(), self.graph_gas.get(), self.graph_water_cut.get(), self.graph_oil.get(), self.graph_gf.get(),
+                 self.graph_pressure.get()]
         z = np.abs(stats.zscore(self.borehole.df.iloc[:, [i for i, v in enumerate(graph) if v == 1]].values))
-        print(np.abs(stats.zscore(self.borehole.df)))
         self.borehole.df.loc[
-            ~self.borehole.df.index.isin(self.borehole.df.iloc[list(np.where(z > score)[0])].index.tolist()), 'Cluster'] = 1
-        self.borehole.df.loc[
-            self.borehole.df.index.isin(self.borehole.df.iloc[list(np.where(z > score)[0])].index.tolist()), 'Cluster'] = -1
+            self.borehole.df.index.isin(
+                self.borehole.df.iloc[list(np.where(z > score)[0])].index.tolist()), 'Cluster'] = -1
 
+        self.Graphic()
+
+    def IQR(self):
+        self.borehole.Standard()
+        self.borehole_list.append(self.borehole.df.copy(deep=True))
+        graph = [self.graph_water.get(), self.graph_gas.get(), self.graph_water_cut.get(), self.graph_oil.get(), self.graph_gf.get(),
+                 self.graph_pressure.get()]
+        for column in self.borehole.df.iloc[:, [i for i, v in enumerate(graph) if v == 1]]:
+            q75, q25 = np.percentile(self.borehole.df.loc[:, column], [75, 25])
+            inter_qr = q75 - q25
+
+            max_border = q75 + (1.5 * inter_qr)
+            min_border = q25 - (1.5 * inter_qr)
+
+            self.borehole.df.loc[self.borehole.df[column] < min_border, 'CLuster'] = -1
+            self.borehole.df.loc[self.borehole.df[column] > max_border, 'Cluster'] = -1
         self.Graphic()
 
     def Color(self):
