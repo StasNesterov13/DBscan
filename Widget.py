@@ -1,6 +1,8 @@
 from tkinter import *
+from tkinter import messagebox
+
 from Borehole import *
-from scipy.interpolate import make_interp_spline
+from numpy import std
 from sklearn.ensemble import IsolationForest
 from sklearn.neighbors import LocalOutlierFactor
 from sklearn.neighbors import NearestNeighbors
@@ -11,6 +13,7 @@ import numpy as np
 import time
 from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk, FigureCanvasTkAgg
 from scipy.interpolate import splrep, splev
+from scipy import stats
 
 
 class Download(Toplevel):
@@ -72,13 +75,14 @@ class Download(Toplevel):
         parent.deiconify()
         self.destroy()
 
+
 class Widget(Tk):
     def __init__(self):
         super().__init__()
         self.title('Фильтрация данных')
         self.geometry('1440x720')
         self.configure(bg='white')
-        self.resizable(width=0, height=0)
+
         self.mainmenu = Menu(self)
         self.config(menu=self.mainmenu)
 
@@ -90,16 +94,27 @@ class Widget(Tk):
         self.methodmenu.add_command(label="DBscan", command=self.Method_dbscan)
         self.methodmenu.add_command(label="IsolationForest", command=self.Method_isolation_forest)
         self.methodmenu.add_command(label="LocalOutlierFactor", command=self.Method_local_outlier_factor)
+        self.methodmenu.add_command(label="Z-Score", command=self.Method_Z_score)
+
+        self.datamenu = Menu(self.mainmenu, tearoff=0)
+        self.datamenu.add_radiobutton(label="All...",
+                                      command=lambda: [self.data_part.set(1), self.All()])
+        self.datamenu.add_radiobutton(label="Part...",
+                                      command=lambda: [self.data_part.set(0), self.Part()])
 
         self.boreholemenu = Menu(self.mainmenu, tearoff=0)
 
         self.graphicmenu = Menu(self.boreholemenu, tearoff=0)
         self.graphicmenu.add_radiobutton(label="Поточечный...",
                                          command=lambda: [self.graphic_mode.set(1), self.Graphic()])
+
         self.graphicmenu.add_radiobutton(label="Линейный...",
                                          command=lambda: [self.graphic_mode.set(0), self.Graphic()])
-        self.boreholemenu.add_cascade(label="График...", menu=self.graphicmenu)
 
+        self.graphicmenu.add_radiobutton(label="Линейный с точками...",
+                                         command=lambda: [self.graphic_mode.set(2), self.Graphic()])
+
+        self.boreholemenu.add_cascade(label="График...", menu=self.graphicmenu)
         self.boreholemenu.add_command(label="Отфильтровать...", command=self.Remove)
         self.boreholemenu.add_command(label="Отменить...", command=self.Cancel)
 
@@ -109,6 +124,8 @@ class Widget(Tk):
                                   menu=self.methodmenu)
         self.mainmenu.add_cascade(label="Обработка",
                                   menu=self.boreholemenu)
+        self.mainmenu.add_cascade(label="Данные",
+                                  menu=self.datamenu)
 
         self.borehole = Borehole()
         self.borehole_copy = Borehole()
@@ -147,78 +164,78 @@ class Widget(Tk):
         self.frame4.config(bg='white')
         self.frame4.pack(side='top', fill='x')
 
-        self.check_btn1 = Checkbutton(self.frame2, text="Дебит нефти", variable=self.graph_oil, command=self.Graphic,
+        self.check_btn1 = Checkbutton(self.frame2, text="Дебит нефти", variable=self.graph_oil,
                                       padx=5, pady=5,
                                       bg='lightblue')
         self.check_btn1.grid(column=0, row=0, sticky='w')
 
-        self.check_btn2 = Checkbutton(self.frame2, text="Дебит газа", variable=self.graph_gas, command=self.Graphic,
+        self.check_btn2 = Checkbutton(self.frame2, text="Дебит газа", variable=self.graph_gas,
                                       padx=5, pady=5,
                                       bg='lightblue')
         self.check_btn2.grid(column=0, row=1, sticky='w')
 
         self.check_btn3 = Checkbutton(self.frame2, text="Дебит жидкости", variable=self.graph_water,
-                                      command=self.Graphic, padx=5,
+                                      padx=5,
                                       pady=5,
                                       bg='lightblue')
         self.check_btn3.grid(column=0, row=2, sticky='w')
 
-        self.check_btn4 = Checkbutton(self.frame2, text="ГФ", variable=self.graph_gf, command=self.Graphic, padx=5,
+        self.check_btn4 = Checkbutton(self.frame2, text="ГФ", variable=self.graph_gf, padx=5,
                                       pady=5,
                                       bg='lightblue')
         self.check_btn4.grid(column=0, row=3, sticky='w')
 
-        self.check_btn5 = Checkbutton(self.frame2, text='Давление', variable=self.graph_pressure, command=self.Graphic,
+        self.check_btn5 = Checkbutton(self.frame2, text='Давление', variable=self.graph_pressure,
                                       padx=5, pady=5, bg='lightblue')
         self.check_btn5.grid(column=0, row=4, sticky='w')
 
         self.check_btn6 = Checkbutton(self.frame2, text="Обводненность", variable=self.graph_water_cut,
-                                      command=self.Graphic,
+
                                       padx=5, pady=5, bg='lightblue')
         self.check_btn6.grid(column=0, row=5, sticky='w')
 
-        self.btn5 = Button(self.frame2, text="Сравнить графики", command=self.Graphics, font="Arial 10", bg='white',
+        self.btn5 = Button(self.frame2, text="Построить график", command=self.Graphic, font="Arial 10", bg='white',
                            width=15)
         self.btn5.grid(column=0, row=7, padx=5, pady=5)
 
+        self.btn6 = Button(self.frame2, text="Сравнить графики", command=self.Graphics, font="Arial 10", bg='white',
+                           width=15)
+        self.btn6.grid(column=0, row=8, padx=5, pady=5)
+
         self.txt1 = Entry(self.frame2, width=20, font="Arial 10", justify='center', bg='white')
-        self.txt1.grid(column=0, row=8, padx=5, pady=5)
+        self.txt1.grid(column=0, row=9, padx=5, pady=5)
 
         self.txt2 = Entry(self.frame2, width=20, font="Arial 10", justify='center', bg='white')
-        self.txt2.grid(column=0, row=9, padx=5, pady=5)
-
-        self.btn6 = Radiobutton(self.frame2, text="Part", command=self.Part, variable=self.data_part, value=0,
-                                font="Arial 10", bg='lightblue',
-                                width=12)
-        self.btn6.grid(column=0, row=10, padx=5, pady=5)
-
-        self.btn7 = Radiobutton(self.frame2, text="All", command=self.All, variable=self.data_part, value=1,
-                                font="Arial 10", bg='lightblue',
-                                width=12)
-        self.btn7.grid(column=0, row=11, padx=5, pady=5)
+        self.txt2.grid(column=0, row=10, padx=5, pady=5)
 
         self.lbl3 = Label(self.frame2, text='Прореживание значений', bg='lightblue')
-        self.lbl3.grid(column=0, row=12, padx=5, pady=5)
+        self.lbl3.grid(column=0, row=11, padx=5, pady=5)
 
         self.btn8 = Button(self.frame2, text="Каждые n", command=lambda: self.Thining(int(self.txt3.get())),
                            font="Arial 10", width=15, bg='white')
-        self.btn8.grid(column=0, row=13, padx=5, pady=5)
+        self.btn8.grid(column=0, row=12, padx=5, pady=5)
 
         self.txt3 = Entry(self.frame2, width=20, font="Arial 10", justify='center', bg='white')
-        self.txt3.grid(column=0, row=14, padx=5, pady=5)
+        self.txt3.grid(column=0, row=13, padx=5, pady=5)
 
         self.lbl4 = Label(self.frame2, text='Удаление значений', bg='lightblue')
-        self.lbl4.grid(column=0, row=15, padx=5, pady=5)
+        self.lbl4.grid(column=0, row=14, padx=5, pady=5)
 
         self.txt4 = Entry(self.frame2, width=20, font="Arial 10", justify='center', bg='white')
-        self.txt4.grid(column=0, row=16, padx=5, pady=5)
+        self.txt4.grid(column=0, row=15, padx=5, pady=5)
 
         self.txt5 = Entry(self.frame2, width=20, font="Arial 10", justify='center', bg='white')
-        self.txt5.grid(column=0, row=17, padx=5, pady=5)
+        self.txt5.grid(column=0, row=16, padx=5, pady=5)
 
         self.btn9 = Button(self.frame2, text="Удалить", command=self.Delete,
                            font="Arial 10", width=15, bg='white')
-        self.btn9.grid(column=0, row=18, padx=5, pady=5)
+        self.btn9.grid(column=0, row=17, padx=5, pady=5)
+
+        self.lbl5 = Label(self.frame2, text='Уровень сглаживания', bg='lightblue')
+        self.lbl5.grid(column=0, row=18, padx=5, pady=5)
+
+        self.scale = Scale(self.frame2, orient="horizontal", resolution=1, from_=0, to=100, length=120, bg='white')
+        self.scale.grid(column=0, row=19, padx=5, pady=5)
 
     def Download_file(self):
         download = Download(self)
@@ -338,6 +355,35 @@ class Widget(Tk):
 
         self.Graphic()
 
+    def Method_Z_score(self):
+        self.lbl2.config(text=f'Z-score')
+
+        self.frame1.destroy()
+        self.frame3.destroy()
+        self.frame4.destroy()
+
+        self.frame1 = Frame(self)
+        self.frame1.config(bg='lightblue')
+        self.frame1.pack(side='top')
+
+        self.frame4 = Frame(self)
+        self.frame4.config(bg='lightblue')
+        self.frame4.pack(side='top', padx=200)
+
+        btn1 = Button(self.frame1, text="Z-score",
+                      command=lambda: self.Zscore(float(txt1.get())),
+                      font="Arial 10", bg='white', width=15)
+        btn1.pack(side='right', padx=5, pady=5)
+
+        txt1 = Entry(self.frame1, width=10, font="Arial 10", justify='center', bg='white')
+        txt1.pack(side='right', padx=5, pady=5)
+        txt1.insert(0, '2')
+
+        lbl1 = Label(self.frame1, text='Score:', font="Arial 10", bg='lightblue')
+        lbl1.pack(side='right', padx=5, pady=5)
+
+        self.Graphic()
+
     def DBscan_hand(self, eps, elements):
         self.borehole.Standard()
         self.borehole_list.append(self.borehole.df.copy(deep=True))
@@ -380,6 +426,22 @@ class Widget(Tk):
 
         local = LocalOutlierFactor(n_neighbors=neighbors, contamination=cont).fit_predict(self.borehole.x_scaled)
         self.borehole.df['Cluster'] = local
+        self.Graphic()
+
+    def Zscore(self, score):
+        pd.set_option('display.max_rows', None)
+        pd.set_option('display.max_columns', None)
+        self.borehole.Standard()
+        self.borehole_list.append(self.borehole.df.copy(deep=True))
+        graph = [self.graph_oil.get(), self.graph_gas.get(), self.graph_water.get(), self.graph_gf.get(),
+                 self.graph_pressure.get(), self.graph_water_cut.get()]
+        z = np.abs(stats.zscore(self.borehole.df.iloc[:, [i for i, v in enumerate(graph) if v == 1]].values))
+        print(np.abs(stats.zscore(self.borehole.df)))
+        self.borehole.df.loc[
+            ~self.borehole.df.index.isin(self.borehole.df.iloc[list(np.where(z > score)[0])].index.tolist()), 'Cluster'] = 1
+        self.borehole.df.loc[
+            self.borehole.df.index.isin(self.borehole.df.iloc[list(np.where(z > score)[0])].index.tolist()), 'Cluster'] = -1
+
         self.Graphic()
 
     def Color(self):
@@ -430,14 +492,28 @@ class Widget(Tk):
                     self.borehole.param[self.borehole.pressure], self.borehole.param[4]]
         if 1 in graph:
             ax = fig.add_subplot()
-            if self.graphic_mode.get():
+            if self.graphic_mode.get() == 1:
                 ax.scatter(self.borehole.df.index.tolist(), self.borehole.df[parametr[graph.index(1)]], s=6,
                            c=self.Color())
+            elif self.graphic_mode.get() == 2:
+                x = np.arange(len(self.borehole.df.index.tolist()))
+                y = np.array(self.borehole.df[parametr[graph.index(1)]].tolist())
+                d = [1 / std(y)] * len(x)
+                tck = splrep(x, y, w=d, s=self.scale.get(), k=3)
+                spl = splev(x, tck)
+                ax.scatter(self.borehole.df.index.tolist(), y, s=6,
+                           c=self.Color())
+                ax.plot(self.borehole.df.index.tolist(), spl, color='orange',
+                        linewidth=2,
+                        linestyle='-')
             else:
-                x = np.array(np.arange(len(self.borehole.df.index.tolist())))
-                y = splev(x, splrep(x, self.borehole.df[parametr[graph.index(1)]].tolist(), s=25000, k=5))
-                ax.plot(self.borehole.df.index.tolist(), y, color='black',
-                        linewidth=1,
+                x = np.arange(len(self.borehole.df.index.tolist()))
+                y = np.array(self.borehole.df[parametr[graph.index(1)]].tolist())
+                d = [1 / std(y)] * len(x)
+                tck = splrep(x, y, w=d, s=self.scale.get(), k=3)
+                spl = splev(x, tck)
+                ax.plot(self.borehole.df.index.tolist(), spl, color='orange',
+                        linewidth=2,
                         linestyle='-')
             ax.set(ylabel=f'{parametr[graph.index(1)]}')
             ax.grid(True)
@@ -464,24 +540,56 @@ class Widget(Tk):
                     self.borehole.param[self.borehole.pressure], self.borehole.param[4]]
         if 1 in graph:
             ax1 = fig.add_subplot(2, 1, 1)
-            if self.graphic_mode.get():
+            if self.graphic_mode.get() == 1:
                 ax1.scatter(self.borehole.df.index.tolist(), self.borehole.df[parametr[graph.index(1)]], s=6,
                             c=self.Color())
+            elif self.graphic_mode.get() == 2:
+                x = np.arange(len(self.borehole.df.index.tolist()))
+                y = np.array(self.borehole.df[parametr[graph.index(1)]].tolist())
+                d = [1 / std(y)] * len(x)
+                tck = splrep(x, y, w=d, s=self.scale.get(), k=3)
+                spl = splev(x, tck)
+                ax1.scatter(self.borehole.df.index.tolist(), y, s=3,
+                            c=self.Color())
+                ax1.plot(self.borehole.df.index.tolist(), spl, color='orange',
+                         linewidth=2,
+                         linestyle='-')
             else:
-                ax1.plot(self.borehole.df.index.tolist(), self.borehole.df[parametr[graph.index(1)]], color='black',
-                         linewidth=1,
+                x = np.arange(len(self.borehole.df.index.tolist()))
+                y = np.array(self.borehole.df[parametr[graph.index(1)]].tolist())
+                d = [1 / std(y)] * len(x)
+                tck = splrep(x, y, w=d, s=self.scale.get(), k=3)
+                spl = splev(x, tck)
+                ax1.plot(self.borehole.df.index.tolist(), spl, color='orange',
+                         linewidth=2,
                          linestyle='-')
             ax1.set(ylabel=f'{parametr[graph.index(1)]}')
             ax1.grid(True)
             graph[graph.index(1)] = 0
             if 1 in graph:
                 ax2 = fig.add_subplot(2, 1, 2)
-                if self.graphic_mode.get():
+                if self.graphic_mode.get() == 1:
                     ax2.scatter(self.borehole.df.index.tolist(), self.borehole.df[parametr[graph.index(1)]], s=6,
                                 c=self.Color())
+                elif self.graphic_mode.get() == 2:
+                    x = np.arange(len(self.borehole.df.index.tolist()))
+                    y = np.array(self.borehole.df[parametr[graph.index(1)]].tolist())
+                    d = [1 / std(y)] * len(x)
+                    tck = splrep(x, y, w=d, s=self.scale.get(), k=3)
+                    spl = splev(x, tck)
+                    ax2.scatter(self.borehole.df.index.tolist(), y, s=3,
+                                c=self.Color())
+                    ax2.plot(self.borehole.df.index.tolist(), spl, color='orange',
+                             linewidth=2,
+                             linestyle='-')
                 else:
-                    ax2.plot(self.borehole.df.index.tolist(), self.borehole.df[parametr[graph.index(1)]], color='black',
-                             linewidth=1,
+                    x = np.arange(len(self.borehole.df.index.tolist()))
+                    y = np.array(self.borehole.df[parametr[graph.index(1)]].tolist())
+                    d = [1 / std(y)] * len(x)
+                    tck = splrep(x, y, w=d, s=self.scale.get(), k=3)
+                    spl = splev(x, tck)
+                    ax2.plot(self.borehole.df.index.tolist(), spl, color='orange',
+                             linewidth=2,
                              linestyle='-')
                 ax2.set(ylabel=f'{parametr[graph.index(1)]}')
                 ax2.grid(True)
@@ -534,15 +642,18 @@ class Widget(Tk):
             self.borehole.df.iloc[:, :-1].to_excel(writer, sheet_name=f'{self.borehole.name}')
 
     def Cancel(self):
-        self.borehole_copy.df = self.borehole_copy.df.append(self.borehole.df)
-        self.borehole_copy.df.sort_index(inplace=True)
-        self.borehole.df = self.borehole_list[-1]
-        self.borehole_list.pop(-1)
-        if self.borehole.df.index[0] == self.borehole_copy.df.index[0] and self.borehole.df.index[-1] == \
-                self.borehole_copy.df.index[-1]:
-            self.data_part.set(value=1)
-        self.Entry_date()
-        self.Graphic()
+        try:
+            self.borehole_copy.df = self.borehole_copy.df.append(self.borehole.df)
+            self.borehole_copy.df.sort_index(inplace=True)
+            self.borehole.df = self.borehole_list[-1]
+            self.borehole_list.pop(-1)
+            if self.borehole.df.index[0] == self.borehole_copy.df.index[0] and self.borehole.df.index[-1] == \
+                    self.borehole_copy.df.index[-1]:
+                self.data_part.set(value=1)
+            self.Entry_date()
+            self.Graphic()
+        except IndexError:
+            messagebox.showinfo("Information", "Исходные данные")
 
     def Thining(self, n):
         self.borehole_list.append(self.borehole.df.copy(deep=True))
