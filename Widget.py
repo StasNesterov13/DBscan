@@ -96,7 +96,7 @@ class Widget(Tk):
         self.methodmenu.add_command(label="LocalOutlierFactor", command=self.Method_local_outlier_factor)
         self.methodmenu.add_command(label="Z-Score", command=self.Method_Z_score)
         self.methodmenu.add_command(label="IQR", command=self.IQR)
-        self.methodmenu.add_command(label="MA", command=self.MA)
+        self.methodmenu.add_command(label="MA", command=self.Method_MA)
 
         self.datamenu = Menu(self.mainmenu, tearoff=0)
         self.datamenu.add_radiobutton(label="All...",
@@ -220,24 +220,31 @@ class Widget(Tk):
         self.txt3 = Entry(self.frame2, width=20, font="Arial 10", justify='center', bg='white')
         self.txt3.grid(column=0, row=13, padx=5, pady=5)
 
+        self.btn10 = Button(self.frame2, text="Логарифмически", command=lambda: self.Logarithmic(int(self.txt6.get())),
+                            font="Arial 10", width=15, bg='white')
+        self.btn10.grid(column=0, row=14, padx=5, pady=5)
+
+        self.txt6 = Entry(self.frame2, width=20, font="Arial 10", justify='center', bg='white')
+        self.txt6.grid(column=0, row=15, padx=5, pady=5)
+
         self.lbl4 = Label(self.frame2, text='Удаление значений', bg='lightblue')
-        self.lbl4.grid(column=0, row=14, padx=5, pady=5)
+        self.lbl4.grid(column=0, row=16, padx=5, pady=5)
 
         self.txt4 = Entry(self.frame2, width=20, font="Arial 10", justify='center', bg='white')
-        self.txt4.grid(column=0, row=15, padx=5, pady=5)
+        self.txt4.grid(column=0, row=17, padx=5, pady=5)
 
         self.txt5 = Entry(self.frame2, width=20, font="Arial 10", justify='center', bg='white')
-        self.txt5.grid(column=0, row=16, padx=5, pady=5)
+        self.txt5.grid(column=0, row=18, padx=5, pady=5)
 
         self.btn9 = Button(self.frame2, text="Удалить", command=self.Delete,
                            font="Arial 10", width=15, bg='white')
-        self.btn9.grid(column=0, row=17, padx=5, pady=5)
+        self.btn9.grid(column=0, row=19, padx=5, pady=5)
 
         self.lbl5 = Label(self.frame2, text='Уровень сглаживания', bg='lightblue')
-        self.lbl5.grid(column=0, row=18, padx=5, pady=5)
+        self.lbl5.grid(column=0, row=20, padx=5, pady=5)
 
-        self.scale = Scale(self.frame2, orient="horizontal", resolution=1, from_=0, to=100, length=120, bg='white')
-        self.scale.grid(column=0, row=19, padx=5, pady=5)
+        self.scale = Scale(self.frame2, orient="horizontal", resolution=1, from_=1, to=200, length=100, bg='white')
+        self.scale.grid(column=0, row=21, padx=5, pady=5)
 
     def Download_file(self):
         download = Download(self)
@@ -386,6 +393,42 @@ class Widget(Tk):
 
         self.Graphic()
 
+    def Method_MA(self):
+        self.lbl2.config(text=f'MA')
+
+        self.frame1.destroy()
+        self.frame3.destroy()
+        self.frame4.destroy()
+
+        self.frame1 = Frame(self)
+        self.frame1.config(bg='lightblue')
+        self.frame1.pack(side='top')
+
+        self.frame4 = Frame(self)
+        self.frame4.config(bg='lightblue')
+        self.frame4.pack(side='top', padx=200)
+
+        btn1 = Button(self.frame1, text="MA",
+                      command=lambda: self.MA(float(txt1.get()), int(txt2.get())),
+                      font="Arial 10", bg='white', width=15)
+        btn1.pack(side='right', padx=5, pady=5)
+
+        txt1 = Entry(self.frame1, width=10, font="Arial 10", justify='center', bg='white')
+        txt1.pack(side='right', padx=5, pady=5)
+        txt1.insert(0, '2')
+
+        lbl1 = Label(self.frame1, text='Score:', font="Arial 10", bg='lightblue')
+        lbl1.pack(side='right', padx=5, pady=5)
+
+        txt2 = Entry(self.frame1, width=10, font="Arial 10", justify='center', bg='white')
+        txt2.pack(side='right', padx=5, pady=5)
+        txt2.insert(0, '60')
+
+        lbl2 = Label(self.frame1, text='Window:', font="Arial 10", bg='lightblue')
+        lbl2.pack(side='right', padx=5, pady=5)
+
+        self.Graphic()
+
     def DBscan_hand(self, eps, elements):
         self.borehole.Standard()
         self.borehole_list.append(self.borehole.df.copy(deep=True))
@@ -414,7 +457,8 @@ class Widget(Tk):
         self.borehole.Standard()
         self.borehole_list.append(self.borehole.df.copy(deep=True))
 
-        graph = [self.graph_water.get(), self.graph_gas.get(), self.graph_water_cut.get(), self.graph_oil.get(), self.graph_gf.get(),
+        graph = [self.graph_water.get(), self.graph_gas.get(), self.graph_water_cut.get(), self.graph_oil.get(),
+                 self.graph_gf.get(),
                  self.graph_pressure.get()]
         forest = IsolationForest(n_estimators=1000, contamination=cont, max_features=sum(graph),
                                  random_state=42, bootstrap=True).fit_predict(
@@ -431,9 +475,10 @@ class Widget(Tk):
         self.Graphic()
 
     def Zscore(self, score):
-        self.borehole.df['Cluster'] = 0
+        self.borehole.Standard()
         self.borehole_list.append(self.borehole.df.copy(deep=True))
-        graph = [self.graph_water.get(), self.graph_gas.get(), self.graph_water_cut.get(), self.graph_oil.get(), self.graph_gf.get(),
+        graph = [self.graph_water.get(), self.graph_gas.get(), self.graph_water_cut.get(), self.graph_oil.get(),
+                 self.graph_gf.get(),
                  self.graph_pressure.get()]
         z = np.abs(stats.zscore(self.borehole.df.iloc[:, [i for i, v in enumerate(graph) if v == 1]].values))
         self.borehole.df.loc[
@@ -448,7 +493,8 @@ class Widget(Tk):
     def IQR(self):
         self.borehole.Standard()
         self.borehole_list.append(self.borehole.df.copy(deep=True))
-        graph = [self.graph_water.get(), self.graph_gas.get(), self.graph_water_cut.get(), self.graph_oil.get(), self.graph_gf.get(),
+        graph = [self.graph_water.get(), self.graph_gas.get(), self.graph_water_cut.get(), self.graph_oil.get(),
+                 self.graph_gf.get(),
                  self.graph_pressure.get()]
         for column in self.borehole.df.iloc[:, [i for i, v in enumerate(graph) if v == 1]]:
             q75, q25 = np.percentile(self.borehole.df.loc[:, column], [75, 25])
@@ -460,19 +506,23 @@ class Widget(Tk):
             self.borehole.df.loc[self.borehole.df[column] > max_value, 'Cluster'] = -1
         self.Graphic()
 
-    def MA(self):
+    def MA(self, score, window):
+        pd.set_option('display.max_rows', None)
         self.borehole.Standard()
         self.borehole_list.append(self.borehole.df.copy(deep=True))
         graph = [self.graph_water.get(), self.graph_gas.get(), self.graph_water_cut.get(), self.graph_oil.get(),
                  self.graph_gf.get(),
                  self.graph_pressure.get()]
-        for column in self.borehole.df.iloc[:, [i for i, v in enumerate(graph) if v == 1]]:
-            df = self.borehole.df.iloc[:, column]
-            df_mean = self.borehole.df.iloc[:, column].rolling(window=60, center=True).mean()
-            df_std = self.borehole.df.iloc[:, column].rolling(window=60, center=True).std()
-            df_low_pass_filter_anomaly = (abs(df - df_mean) > (2 * df_std)).astype(int)
-            df_low_pass_filter_anomaly = df_low_pass_filter_anomaly.replace({1: -1, 0: 1})
-            self.borehole.df['Cluster'] = df_low_pass_filter_anomaly
+        df = self.borehole.df.iloc[:, [i for i, v in enumerate(graph) if v == 1]]
+        df_mean = self.borehole.df.iloc[:, [i for i, v in enumerate(graph) if v == 1]].rolling(window=window,
+                                                                                               center=True,
+                                                                                               min_periods=1).mean()
+        df_std = self.borehole.df.iloc[:, [i for i, v in enumerate(graph) if v == 1]].rolling(window=window,
+                                                                                              center=True,
+                                                                                              min_periods=1).std()
+        df_low_pass_filter_anomaly = (abs(df - df_mean) > (score * df_std))
+        df_low_pass_filter_anomaly = df_low_pass_filter_anomaly.replace({True: -1, False: 1})
+        self.borehole.df['Cluster'] = df_low_pass_filter_anomaly
 
         self.Graphic()
 
@@ -535,7 +585,11 @@ class Widget(Tk):
                 spl = splev(x, tck)
                 ax.scatter(self.borehole.df.index.tolist(), y, s=6,
                            c=self.Color())
-                ax.plot(self.borehole.df.index.tolist(), spl, color='orange',
+                ax.plot(self.borehole.df.index.tolist(),
+                        self.borehole.df[parametr[graph.index(1)]].rolling(window=self.scale.get(),
+                                                                           center=True,
+                                                                           min_periods=1).mean(),
+                        color='orange',
                         linewidth=2,
                         linestyle='-')
             else:
@@ -544,7 +598,11 @@ class Widget(Tk):
                 d = [1 / std(y)] * len(x)
                 tck = splrep(x, y, w=d, s=self.scale.get(), k=3)
                 spl = splev(x, tck)
-                ax.plot(self.borehole.df.index.tolist(), spl, color='orange',
+                ax.plot(self.borehole.df.index.tolist(),
+                        self.borehole.df[parametr[graph.index(1)]].rolling(window=self.scale.get(),
+                                                                           center=True,
+                                                                           min_periods=1).mean(),
+                        color='orange',
                         linewidth=2,
                         linestyle='-')
             ax.set(ylabel=f'{parametr[graph.index(1)]}')
@@ -690,7 +748,18 @@ class Widget(Tk):
     def Thining(self, n):
         self.borehole_list.append(self.borehole.df.copy(deep=True))
         self.borehole.df = self.borehole.df[~self.borehole.df.index.isin(self.borehole.df.iloc[::n].index.tolist())]
+        self.Entry_date()
+        self.Graphic()
 
+    def Logarithmic(self, n):
+        self.borehole_list.append(self.borehole.df.copy(deep=True))
+        i = n
+        thining_list = []
+        while i < self.borehole.df.shape[0]:
+            thining_list.append(i)
+            i += round(n * np.log(i))
+        print(thining_list)
+        self.borehole.df = self.borehole.df[~self.borehole.df.index.isin([self.borehole.df.index.tolist()[j] for j in thining_list])]
         self.Entry_date()
         self.Graphic()
 
